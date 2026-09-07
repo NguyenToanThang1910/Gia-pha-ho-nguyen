@@ -1,0 +1,654 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gia Phả Gia Tộc Họ Nguyễn - Thôn Hạ Vỹ, Lý Nhân, Hà Nam</title>
+    
+    <!-- Family Tree JS Library -->
+    <script src="https://balkan.app/js/FamilyTree.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase Libraries (Compat 9.23.0) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-title" onclick="switchView('tree')">
+            <h1>🏛️ Họ Nguyễn Lý Nhân</h1>
+            <p>Thôn Hạ Vỹ, Nhân Chính, Lý Nhân, Hà Nam</p>
+        </div>
+
+        <!-- NAV TABS -->
+        <div class="header-nav">
+            <button class="nav-tab-btn active" id="tab-tree" onclick="switchView('tree')">🌳 Cây Phả Hệ</button>
+            <button class="nav-tab-btn" id="tab-list" onclick="switchView('list')">📜 Danh Bạ Họ</button>
+            <button class="nav-tab-btn" id="tab-memorial" onclick="switchView('memorial')">🕯️ Lịch Giỗ Họ</button>
+        </div>
+
+        <!-- USER / ADMIN CONTROLS -->
+        <div class="header-controls">
+            <!-- Báo sinh (Mọi thành viên đều được dùng) -->
+            <button class="btn btn-secondary" onclick="openAddMemberModal(false)">
+                👶 Báo Sinh / Thêm Con
+            </button>
+
+            <!-- Nút Hướng Dẫn -->
+            <button class="btn btn-secondary" onclick="openModal('guideModal')">
+                📖 Hướng Dẫn
+            </button>
+
+            <!-- Huy hiệu vai trò -->
+            <span class="role-badge role-user" id="role-display">👤 Con Cháu</span>
+
+            <!-- Nút Đề Xuất Chờ Duyệt (Admin) -->
+            <button class="btn btn-danger" id="btn-requests" onclick="openRequestsModal()" style="display: none;">
+                📋 Duyệt <span class="badge" id="request-count">0</span>
+            </button>
+
+            <!-- Nút Thêm Mới Trực Tiếp (Admin) -->
+            <button class="btn btn-success" id="btn-admin-add" onclick="openAddMemberModal(true)" style="display: none;">
+                ➕ Thêm Trực Tiếp
+            </button>
+
+            <!-- Nút Phân Quyền Duyệt (Chỉ Root Admin) -->
+            <button class="btn btn-secondary" id="btn-admins" onclick="openAdminsModal()" style="display: none;" title="Quản lý và cấp quyền Người duyệt thứ 2, thứ 3...">
+                👥 Phân Quyền
+            </button>
+
+            <!-- Nút Nhập Hàng Loạt (Excel / Bảng Nhanh) -->
+            <button class="btn btn-secondary" id="btn-bulk-import" onclick="openBulkImportModal()" style="display: none;" title="Nhập hàng loạt thành viên từ bảng tính Excel">
+                📥 Nhập Nhanh
+            </button>
+
+            <!-- Nút Sao Lưu (Admin) -->
+            <button class="btn btn-secondary" id="btn-export" onclick="exportData()" style="display: none;" title="Tải file sao lưu JSON về máy">
+                💾 Sao Lưu
+            </button>
+
+            <!-- Nút Đăng Nhập / Đăng Xuất Admin -->
+            <button class="btn" id="btn-auth" onclick="handleAuthClick()">
+                🔐 Admin
+            </button>
+        </div>
+    </header>
+
+    <!-- VIEW 1: CÂY PHẢ HỆ (BALKAN FAMILYTREE) -->
+    <section id="view-tree" class="view-section active">
+        <div id="tree-container">
+            <div class="tree-toolbar">
+                <label>🔍 <b>Tìm kiếm:</b></label>
+                <input type="text" id="searchInput" placeholder="Nhập tên cụ, bác, anh..." oninput="searchMember()">
+                <label style="margin-left: 6px;">🚩 <b>Thế hệ:</b></label>
+                <select id="genFilter" onchange="filterGeneration()">
+                    <option value="ALL">Tất cả thế hệ (1-9)</option>
+                    <option value="1">Thế hệ 1 (Thủy tổ)</option>
+                    <option value="2">Thế hệ 2</option>
+                    <option value="3">Thế hệ 3</option>
+                    <option value="4">Thế hệ 4</option>
+                    <option value="5">Thế hệ 5</option>
+                    <option value="6">Thế hệ 6</option>
+                    <option value="7">Thế hệ 7</option>
+                    <option value="8">Thế hệ 8</option>
+                    <option value="9">Thế hệ 9</option>
+                </select>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="resetTreeZoom()">
+                    🎯 Căn giữa
+                </button>
+            </div>
+            <div id="tree" style="width:100%; height:100%;"></div>
+        </div>
+    </section>
+
+    <!-- VIEW 2: DANH BẠ GIA TỘC THEO THẾ HỆ (MOBILE-FRIENDLY) -->
+    <section id="view-list" class="view-section">
+        <div class="content-scrollable">
+            <div class="search-filter-bar">
+                <input type="text" id="listSearchInput" placeholder="🔍 Tìm theo họ tên, vợ/chồng..." oninput="renderListView()" style="flex: 1; min-width: 200px;">
+                <select id="listGenFilter" onchange="renderListView()">
+                    <option value="ALL">Tất cả thế hệ (Đời 1 - 9)</option>
+                    <option value="1">Thế hệ 1</option>
+                    <option value="2">Thế hệ 2</option>
+                    <option value="3">Thế hệ 3</option>
+                    <option value="4">Thế hệ 4</option>
+                    <option value="5">Thế hệ 5</option>
+                    <option value="6">Thế hệ 6</option>
+                    <option value="7">Thế hệ 7</option>
+                    <option value="8">Thế hệ 8</option>
+                    <option value="9">Thế hệ 9</option>
+                </select>
+            </div>
+            <div id="list-container">
+                <!-- Sẽ render tự động qua JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 3: LỊCH NGÀY GIỖ HỌ (ÂM LỊCH & 12 THÁNG) -->
+    <section id="view-memorial" class="view-section">
+        <div class="content-scrollable">
+            <!-- BANNER ÂM LỊCH HÔM NAY -->
+            <div class="memorial-today-banner" id="memorial-today-banner">
+                <div class="memorial-today-text" id="memorial-today-info">
+                    <!-- Sẽ render tự động qua JS -->
+                    🏮 <b>Đang tải lịch âm dương hôm nay...</b>
+                </div>
+                <div class="memorial-stat-badge" id="memorial-stat-badge">
+                    🕯️ 0 Ngày giỗ trong tháng
+                </div>
+            </div>
+
+            <!-- THANH ĐIỀU KHIỂN & CHUYỂN ĐỔI CHẾ ĐỘ XEM -->
+            <div class="search-filter-bar" style="justify-content: space-between;">
+                <div class="memorial-view-modes">
+                    <button class="mem-mode-btn active" id="btn-mode-grid12" onclick="switchMemorialMode('grid12')">
+                        🗓️ 12 Tháng Toàn Cảnh
+                    </button>
+                    <button class="mem-mode-btn" id="btn-mode-single" onclick="switchMemorialMode('single')">
+                        📆 Xem Từng Tháng
+                    </button>
+                    <button class="mem-mode-btn" id="btn-mode-list" onclick="switchMemorialMode('list')">
+                        📜 Danh Sách Đầy Đủ
+                    </button>
+                </div>
+                <div style="flex: 1; max-width: 320px; min-width: 180px;">
+                    <input type="text" id="memorialSearchInput" placeholder="🔍 Tìm tên cụ, ngày giỗ, nơi an táng..." oninput="handleMemorialSearch()" style="width: 100%;">
+                </div>
+            </div>
+
+            <!-- THANH CHỌN NHANH 12 THÁNG -->
+            <div class="month-pills-bar" id="month-pills-bar">
+                <!-- 12 nút tháng render qua JS -->
+            </div>
+
+            <!-- KHUNG CHỨA GIAO DIỆN LỊCH GIỖ -->
+            <div id="memorial-container">
+                <!-- Sẽ render tự động qua JS theo chế độ đang chọn -->
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        Gia Phả Họ Nguyễn - Thôn Hạ Vỹ, Lý Nhân, Hà Nam • Phiên bản 2.0 (Bảo mật Cloud Firebase)
+    </footer>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- 1. MODAL: CHI TIẾT THÀNH VIÊN -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="view-name">Thông tin thành viên</h3>
+                <button class="close-btn" onclick="closeModal('viewModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="view-avatar-box">
+                    <img id="view-img" class="view-avatar-img" src="" alt="Chân dung">
+                </div>
+                <div class="info-box-grid">
+                    <div class="info-item">
+                        <div class="info-label">Thế hệ</div>
+                        <div class="info-value" id="view-gen"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Giới tính</div>
+                        <div class="info-value" id="view-gender"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Ngày sinh</div>
+                        <div class="info-value" id="view-dob"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Ngày mất (Tạ thế)</div>
+                        <div class="info-value" id="view-dod" style="color:#b91c1c; font-weight:bold;"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Vợ / Chồng</div>
+                        <div class="info-value" id="view-spouse"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Nơi hạ táng / Phần mộ</div>
+                        <div class="info-value" id="view-burial"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Con cái (Trực hệ)</div>
+                        <div class="info-value" id="view-children"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Ghi chú bổ sung</div>
+                        <div class="info-value" id="view-notes"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewModal')">Đóng</button>
+                <button class="btn btn-danger" id="btn-delete-member" onclick="deleteCurrentMember()" style="display:none;">
+                    🗑️ Xóa
+                </button>
+                <button class="btn btn-success" id="btn-edit-action" onclick="openSuggestEditModal()">
+                    📝 Đề xuất sửa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL: ĐỀ XUẤT SỬA THÔNG TIN -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="edit-modal-title">Đề xuất cập nhật thông tin</h3>
+                <button class="close-btn" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Hộp người gửi (Chỉ hiện khi là Con Cháu) -->
+                <div class="sender-box" id="edit-sender-box">
+                    <h4>👤 Thông tin người gửi đề xuất (Bắt buộc)</h4>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Họ tên của bạn (*):</label>
+                            <input type="text" id="edit-sender-name" placeholder="VD: Nguyễn Văn Nam">
+                        </div>
+                        <div class="form-group">
+                            <label>Số điện thoại liên hệ (*):</label>
+                            <input type="tel" id="edit-sender-phone" placeholder="VD: 0987xxxxxx">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Quan hệ với thành viên này:</label>
+                        <input type="text" id="edit-sender-relation" placeholder="VD: Con trai trưởng, Cháu nội...">
+                    </div>
+                </div>
+
+                <form id="editForm" onsubmit="event.preventDefault(); submitEditForm();">
+                    <input type="hidden" id="edit-id">
+                    <input type="hidden" id="edit-img-data">
+
+                    <!-- Tải ảnh trực tiếp từ điện thoại -->
+                    <div class="form-group">
+                        <label>Chân dung (Tải ảnh từ điện thoại / máy tính):</label>
+                        <div class="photo-uploader" onclick="document.getElementById('edit-file-input').click()">
+                            <span>📷 Nhấp vào đây để chọn ảnh hoặc chụp ảnh</span>
+                            <input type="file" id="edit-file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'edit-preview', 'edit-img-data')">
+                        </div>
+                        <div class="photo-preview-wrap" id="edit-preview-wrap" style="display: none;">
+                            <img id="edit-preview" class="photo-preview" src="" alt="Xem trước">
+                            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;" onclick="clearUploadedImage('edit-preview', 'edit-img-data', 'edit-preview-wrap')">
+                                ❌ Bỏ ảnh này
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Họ và Tên (*):</label>
+                        <input type="text" id="edit-name" required>
+                    </div>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Thế hệ:</label>
+                            <input type="number" id="edit-gen" min="1" max="9" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Giới tính:</label>
+                            <select id="edit-gender">
+                                <option value="male">Nam (Cụ Ông / Bác / Anh)</option>
+                                <option value="female">Nữ (Cụ Bà / Cô / Chị)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Ngày sinh:</label>
+                            <input type="text" id="edit-dob" placeholder="VD: 15/04/1950">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày mất (ghi rõ AL nếu là Âm lịch):</label>
+                            <input type="text" id="edit-dod" placeholder="VD: 14/5 (AL)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Vợ / Chồng (Họ tên):</label>
+                        <input type="text" id="edit-spouse">
+                    </div>
+                    <div class="form-group">
+                        <label>Nơi hạ táng / An táng:</label>
+                        <input type="text" id="edit-burial" placeholder="VD: Nghĩa trang Thôn Hạ Vỹ, Ninh Bình...">
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi chú bổ sung:</label>
+                        <textarea id="edit-notes" placeholder="Chức sắc, tiểu sử, con cháu..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editModal')">Hủy</button>
+                <button class="btn btn-success" onclick="submitEditForm()">💾 Gửi Cập Nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL: THÊM CON CHÁU / BÁO SINH MỚI -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="add-modal-title">👶 Báo Sinh / Thêm Con Cháu Mới</h3>
+                <button class="close-btn" onclick="closeModal('addModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Hộp người gửi khi con cháu báo sinh -->
+                <div class="sender-box" id="add-sender-box">
+                    <h4>👤 Thông tin người đề xuất thêm con cháu (Bắt buộc)</h4>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Họ tên của bạn (*):</label>
+                            <input type="text" id="add-sender-name" placeholder="VD: Nguyễn Văn Nam">
+                        </div>
+                        <div class="form-group">
+                            <label>Số điện thoại liên hệ (*):</label>
+                            <input type="tel" id="add-sender-phone" placeholder="VD: 0987xxxxxx">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Mối quan hệ:</label>
+                        <input type="text" id="add-sender-relation" placeholder="VD: Bố/Mẹ của cháu...">
+                    </div>
+                </div>
+
+                <form id="addForm" onsubmit="event.preventDefault(); submitAddForm();">
+                    <input type="hidden" id="add-img-data">
+
+                    <div class="form-group">
+                        <label>Chọn Cha / Mẹ (Trực hệ thuộc Họ Nguyễn) (*):</label>
+                        <select id="add-parent-id" required onchange="autoFillGeneration()"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Họ và Tên con cháu (*):</label>
+                        <input type="text" id="add-name" required placeholder="VD: Nguyễn Văn B">
+                    </div>
+
+                    <!-- Tải ảnh trực tiếp -->
+                    <div class="form-group">
+                        <label>Chân dung (Tải ảnh từ điện thoại):</label>
+                        <div class="photo-uploader" onclick="document.getElementById('add-file-input').click()">
+                            <span>📷 Chọn ảnh hoặc chụp ảnh từ máy</span>
+                            <input type="file" id="add-file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'add-preview', 'add-img-data')">
+                        </div>
+                        <div class="photo-preview-wrap" id="add-preview-wrap" style="display: none;">
+                            <img id="add-preview" class="photo-preview" src="" alt="Xem trước">
+                            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;" onclick="clearUploadedImage('add-preview', 'add-img-data', 'add-preview-wrap')">
+                                ❌ Bỏ ảnh này
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Thế hệ:</label>
+                            <input type="number" id="add-gen" min="1" max="9" value="8" readonly style="background:#f1f5f9;">
+                        </div>
+                        <div class="form-group">
+                            <label>Giới tính:</label>
+                            <select id="add-gender">
+                                <option value="male">Nam (Trai)</option>
+                                <option value="female">Nữ (Gái)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Ngày tháng năm sinh:</label>
+                            <input type="text" id="add-dob" placeholder="VD: 01/06/2024">
+                        </div>
+                        <div class="form-group">
+                            <label>Vợ / Chồng (nếu có):</label>
+                            <input type="text" id="add-spouse" placeholder="Chưa có">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ghi chú bổ sung:</label>
+                        <textarea id="add-notes" placeholder="Con thứ mấy trong gia đình, nơi cư trú..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addModal')">Hủy</button>
+                <button class="btn btn-success" id="btn-save-new" onclick="submitAddForm()">
+                    ➕ Gửi Đề Xuất
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MODAL: ĐĂNG NHẬP ADMIN (FIREBASE AUTH) -->
+    <div class="modal" id="authModal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>🔐 Đăng Nhập Quản Trị Viên</h3>
+                <button class="close-btn" onclick="closeModal('authModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">
+                    Dành riêng cho Ban Quản Trị / Trưởng Tộc duyệt thông tin gia phả.
+                </p>
+                <div id="auth-error" style="display:none; background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:12px;"></div>
+                <form onsubmit="event.preventDefault(); executeLogin();">
+                    <div class="form-group">
+                        <label>Email Đăng Nhập:</label>
+                        <input type="email" id="auth-email" placeholder="VD: email_cua_ban@gmail.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mật khẩu:</label>
+                        <input type="password" id="auth-password" placeholder="Nhập mật khẩu quản trị..." required>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; padding: 10px; margin-top: 8px;">
+                        Đăng Nhập Ngay
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('authModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL: DANH SÁCH ĐỀ XUẤT CHỜ DUYỆT (ADMIN) -->
+    <div class="modal" id="requestsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📋 Đề Xuất Chờ Phê Duyệt</h3>
+                <button class="close-btn" onclick="closeModal('requestsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="requests-container">
+                    <p style="text-align: center; color: #64748b; padding: 20px;">Hiện không có đề xuất nào đang chờ duyệt.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('requestsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL: HƯỚNG DẪN SỬ DỤNG -->
+    <div class="modal" id="guideModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📖 Hướng Dẫn Sử Dụng Gia Phả</h3>
+                <button class="close-btn" onclick="closeModal('guideModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+                <h4 style="color: var(--primary-color); margin-bottom: 4px;">1. Dành cho Con Cháu xem gia phả:</h4>
+                <ul style="padding-left: 20px; margin-bottom: 14px;">
+                    <li><b>Chế độ xem:</b> Bạn có thể bấm vào <b>🌳 Cây Phả Hệ</b> để ngắm sơ đồ toàn thể, hoặc chọn <b>📜 Danh Bạ Họ</b> để xem danh sách dễ đọc trên điện thoại.</li>
+                    <li><b>Lịch Giỗ:</b> Bấm vào tab <b>🕯️ Lịch Giỗ Họ</b> để xem danh sách ngày giỗ các cụ theo Âm lịch.</li>
+                    <li><b>Báo Sinh:</b> Khi gia đình có em bé mới sinh, bấm nút <b>👶 Báo Sinh / Thêm Con</b> ở góc trên để gửi thông tin cho Ban Quản Trị cập nhật vào phả hệ.</li>
+                    <li><b>Đề xuất sửa:</b> Nhấp vào tên thành viên ➔ Bấm <b>📝 Đề xuất sửa</b> để đính chính ngày sinh, ngày mất, phần mộ hoặc tải ảnh chân dung mới lên.</li>
+                </ul>
+
+                <h4 style="color: var(--primary-color); margin-bottom: 4px;">2. Dành cho Ban Quản Trị & Ban Thu Thập:</h4>
+                <ul style="padding-left: 20px;">
+                    <li><b>Quản Lý Hệ Thống:</b> Anh Nguyễn Toàn Thắng (📞 094 999 1515) phụ trách toàn diện hệ thống kỹ thuật và phân quyền chỉ định chức danh.</li>
+                    <li><b>Đăng nhập:</b> Bấm vào nút <b>🔐 Admin</b> trên góc màn hình và nhập Email + Mật khẩu quản trị.</li>
+                    <li><b>Duyệt đề xuất:</b> Khi có đề xuất mới, nút <b>📋 Duyệt</b> sẽ hiển thị số lượng đề xuất màu đỏ để kiểm duyệt.</li>
+                    <li><b>Ban Thu Thập:</b> Thành viên đi thu thập các chi được cấp quyền dùng nút <b>➕ Thêm Trực Tiếp</b> và <b>📥 Nhập Nhanh</b> để nạp dữ liệu từ Excel vào phả hệ nhanh chóng.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('guideModal')">Đã Hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. MODAL: QUẢN LÝ PHÂN QUYỀN BAN QUẢN TRỊ & BAN THU THẬP -->
+    <div class="modal" id="adminsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>👥 Quản Lý Phân Quyền Ban Quản Trị & Ban Thu Thập</h3>
+                <button class="close-btn" onclick="closeModal('adminsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 14px;">
+                    <b>Quản Lý Hệ Thống (Nguyễn Toàn Thắng)</b> có thể chỉ định ai là Trưởng Ban, Phó Ban, Người Duyệt Thông Tin hoặc Ban Thu Thập để mọi người trong họ cùng đi thu thập và cập nhật thông tin phả hệ.
+                </p>
+
+                <!-- Danh sách Ban Quản Trị hiện tại -->
+                <div style="margin-bottom: 18px;">
+                    <h4 style="font-size: 0.9rem; color: var(--primary-color); margin-bottom: 8px;">
+                        🛡️ Danh Sách Ban Quản Trị & Đội Ngũ Thu Thập:
+                    </h4>
+                    <div id="admins-list-container">
+                        <!-- Sẽ render qua JS -->
+                    </div>
+                </div>
+
+                <!-- Form cấp quyền người mới -->
+                <div class="sender-box" style="background: #fdfbf7; border-color: #d4af37;">
+                    <h4 style="color: #92400e;">➕ Thêm & Phân Quyền Thành Viên Mới</h4>
+                    <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 10px;">
+                        Hệ thống sẽ cấp quyền theo đúng chức danh bạn chỉ định và tạo tài khoản đăng nhập cho người này.
+                    </p>
+                    <form id="addAdminForm" onsubmit="event.preventDefault(); submitNewAdmin();">
+                        <div class="info-grid">
+                            <div class="form-group">
+                                <label>Họ và Tên (*):</label>
+                                <input type="text" id="new-admin-name" placeholder="VD: Bác Nguyễn Văn Nam" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Số điện thoại liên hệ (*):</label>
+                                <input type="tel" id="new-admin-phone" placeholder="VD: 0987654321" required>
+                            </div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="form-group">
+                                <label>Email đăng nhập (*):</label>
+                                <input type="email" id="new-admin-email" placeholder="VD: nguyenb@gmail.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mật khẩu cấp cho người này (*):</label>
+                                <input type="password" id="new-admin-password" placeholder="Tối thiểu 6 ký tự" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Vai trò / Chức danh phân công:</label>
+                            <select id="new-admin-role">
+                                <option value="TRUONG_BAN">👑 Trưởng Ban Quản Trị (Toàn quyền nội dung, duyệt & phân công)</option>
+                                <option value="PHO_BAN">🛡️ Phó Ban Quản Trị (Duyệt tin, thêm/sửa trực tiếp, sao lưu)</option>
+                                <option value="MODERATOR" selected>📋 Người Duyệt Thông Tin (Chuyên duyệt đề xuất con cháu)</option>
+                                <option value="COLLABORATOR">📝 Ban Thu Thập Thông Tin (Thành viên đi thu thập: Nhập nhanh & Thêm trực tiếp)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; padding: 9px;">
+                            ➕ Cấp Quyền & Tạo Tài Khoản Cho Người Này
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Hướng dẫn dự phòng -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #1e40af; margin-top: 12px;">
+                    <b>💡 Hướng dẫn gửi cho người được phân quyền:</b>
+                    <ol style="margin-left: 18px; margin-top: 4px;">
+                        <li>Gửi đường link trang web cho người thứ 2.</li>
+                        <li>Bảo họ bấm nút <b>🔐 Admin</b> trên góc màn hình và nhập đúng Email + Mật khẩu bạn vừa đặt ở trên.</li>
+                        <li>Sau khi đăng nhập, họ sẽ thấy nút <b>📋 Duyệt</b> màu đỏ để duyệt thông tin con cháu gửi về.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('adminsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. MODAL: NHẬP DỮ LIỆU HÀNG LOẠT (BULK IMPORT) -->
+    <div class="modal" id="importModal">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="modal-header">
+                <h3>📥 Nhập Dữ Liệu Hàng Loạt (Excel / Copy-Paste)</h3>
+                <button class="close-btn" onclick="closeModal('importModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;">
+                    Phương án tối ưu để cập nhật đồng loạt nhiều thành viên cùng lúc: Copy các hàng từ file Excel hoặc Google Sheets rồi dán vào ô dưới đây.
+                </p>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="downloadExcelTemplate()">
+                        📄 Tải Bảng Mẫu Excel / CSV
+                    </button>
+                    <button class="btn btn-secondary" onclick="fillSampleImportData()">
+                        📝 Dán Dữ Liệu Mẫu Thử Nghiệm
+                    </button>
+                </div>
+
+                <div class="bulk-import-box">
+                    <label style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                        Dán dữ liệu từ Excel vào đây (Các cột cách nhau bằng phím Tab):
+                    </label>
+                    <textarea id="bulkImportInput" class="bulk-textarea" placeholder="Họ và Tên	Thế hệ	Tên Cha/Mẹ	Giới tính	Ngày sinh	Ngày mất (AL)	Vợ/Chồng	Nơi an táng	Ghi chú
+Nguyễn Văn An	5	Nguyễn Văn Kế	Nam	15/04/1960		Trần Thị Mai	Hà Nam	Chi trưởng
+Nguyễn Thị Bình	5	Nguyễn Văn Kế	Nữ	10/08/1965	15/8 (AL)	Lê Văn C	Ninh Bình	Bà cô"></textarea>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-size: 0.78rem; color: #64748b;">
+                            * Thứ tự cột: <b>Họ tên | Đời | Tên Cha/Mẹ | Giới tính | Sinh | Mất | Vợ/Chồng | An táng | Ghi chú</b>
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('bulkImportInput').value=''; document.getElementById('bulkImportPreview').innerHTML='';" style="font-size:0.75rem; padding:4px 8px;">
+                                🧹 Xóa trắng
+                            </button>
+                            <button class="btn" onclick="parseBulkInputData()">
+                                👁️ Kiểm Tra & Xem Trước
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Xem trước kết quả parse -->
+                <div id="bulkImportPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importModal')">Hủy</button>
+                <button class="btn btn-success" id="btn-save-bulk" onclick="executeBulkSave()" style="display: none;">
+                    ✅ Xác Nhận Lưu Toàn Bộ Vào Phả Hệ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modular Scripts -->
+    <script src="js/firebase.js"></script>
+    <script src="js/admin.js"></script>
+    <script src="js/calendar.js"></script>
+    <script src="js/family-tree.js"></script>
+    <script src="js/members.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

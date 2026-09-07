@@ -1,0 +1,3449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Gia Phả Gia Tộc Họ Nguyễn - Thôn Hạ Vỹ, Lý Nhân, Hà Nam</title>
+    
+    <!-- Family Tree JS Library -->
+    <script src="https://balkan.app/js/FamilyTree.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- Firebase Libraries (Compat 9.23.0) -->
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #8B0000;
+            --primary-hover: #A52A2A;
+            --bg-color: #FDFBF7;
+            --card-bg: #FFFFFF;
+            --text-color: #2C3E50;
+            --border-color: #D4AF37;
+            --accent-color: #DAA520;
+            --gold: #FFD700;
+            --shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background: linear-gradient(135deg, #7A0000 0%, #4A0000 100%);
+            color: #FFF8DC;
+            padding: 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 3px solid var(--accent-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+            z-index: 20;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .header-title {
+            cursor: pointer;
+        }
+
+        .header-title h1 {
+            font-family: 'Merriweather', serif;
+            font-size: 1.25rem;
+            letter-spacing: 0.5px;
+            color: var(--gold);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .header-title p {
+            font-size: 0.8rem;
+            opacity: 0.9;
+            font-style: italic;
+        }
+
+        .header-nav {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            background: rgba(0,0,0,0.25);
+            padding: 4px;
+            border-radius: 8px;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .nav-tab-btn {
+            background: transparent;
+            color: #FFF8DC;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .nav-tab-btn.active {
+            background: var(--accent-color);
+            color: #4A0000;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+
+        .header-controls {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .role-badge {
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .role-user {
+            background-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .role-super-admin {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b45309 100%);
+            color: #fef08a;
+            border: 1px solid #facc15;
+            box-shadow: 0 2px 6px rgba(180, 83, 9, 0.35);
+        }
+
+        .role-truong-ban, .role-admin, .role-root-admin {
+            background: linear-gradient(135deg, #fef08a 0%, #fde047 100%);
+            color: #854d0e;
+            border: 1px solid #ca8a04;
+            box-shadow: 0 1px 4px rgba(202, 138, 4, 0.2);
+        }
+
+        .role-pho-ban {
+            background: linear-gradient(135deg, #ccfbf1 0%, #99f6e4 100%);
+            color: #0f766e;
+            border: 1px solid #5eead4;
+            box-shadow: 0 1px 4px rgba(15, 118, 110, 0.15);
+        }
+
+        .role-moderator {
+            background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+            box-shadow: 0 1px 4px rgba(30, 64, 175, 0.15);
+        }
+
+        .role-collaborator {
+            background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+            color: #15803d;
+            border: 1px solid #86efac;
+            box-shadow: 0 1px 4px rgba(21, 128, 61, 0.15);
+        }
+
+        /* BUTTONS */
+        button.btn {
+            background-color: var(--accent-color);
+            color: #4A0000;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 0.82rem;
+            white-space: nowrap;
+        }
+
+        button.btn:hover {
+            background-color: var(--gold);
+            transform: translateY(-1px);
+        }
+
+        button.btn-secondary {
+            background-color: transparent;
+            border: 1px solid var(--gold);
+            color: var(--gold);
+        }
+
+        button.btn-secondary:hover {
+            background-color: rgba(255,215,0,0.15);
+        }
+
+        button.btn-danger {
+            background-color: #dc2626;
+            color: white;
+        }
+        button.btn-danger:hover { background-color: #b91c1c; }
+
+        button.btn-success {
+            background-color: #16a34a;
+            color: white;
+        }
+        button.btn-success:hover { background-color: #15803d; }
+
+        /* MAIN VIEWS */
+        .view-section {
+            display: none;
+            width: 100%;
+            height: calc(100vh - 62px);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .view-section.active {
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* TREE VIEW */
+        #tree-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .tree-toolbar {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            z-index: 10;
+            background: rgba(255, 255, 255, 0.96);
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            border: 1px solid #cbd5e1;
+            flex-wrap: wrap;
+            max-width: calc(100% - 24px);
+        }
+
+        .tree-toolbar input, .tree-toolbar select {
+            padding: 6px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 5px;
+            font-size: 0.82rem;
+            outline: none;
+        }
+
+        /* LIST & MEMORIAL VIEWS */
+        .content-scrollable {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px 40px;
+            background-color: var(--bg-color);
+        }
+
+        .search-filter-bar {
+            background: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            margin-bottom: 16px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            border: 1px solid #e2e8f0;
+        }
+
+        .search-filter-bar input, .search-filter-bar select {
+            padding: 8px 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+
+        .gen-section {
+            margin-bottom: 24px;
+        }
+
+        .gen-header {
+            background: linear-gradient(90deg, #7A0000, #9A1B1B);
+            color: #FFF8DC;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-family: 'Merriweather', serif;
+            font-size: 1rem;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid var(--gold);
+        }
+
+        .member-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+            gap: 12px;
+        }
+
+        .member-card {
+            background: white;
+            border-radius: 10px;
+            padding: 14px;
+            box-shadow: var(--shadow);
+            border: 1px solid #e2e8f0;
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            transition: all 0.2s;
+            cursor: pointer;
+        }
+
+        .member-card:hover {
+            border-color: var(--accent-color);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 18px rgba(139, 0, 0, 0.12);
+        }
+
+        .card-avatar {
+            width: 58px;
+            height: 58px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+            flex-shrink: 0;
+            background: #f1f5f9;
+        }
+
+        .card-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .card-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: var(--primary-color);
+            margin-bottom: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .card-subtext {
+            font-size: 0.78rem;
+            color: #64748b;
+            line-height: 1.4;
+        }
+
+        .card-subtext b {
+            color: #334155;
+        }
+
+        /* MEMORIAL TABLE */
+        .memorial-card {
+            background: white;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-left: 4px solid #b45309;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .memorial-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .memorial-date {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+            border: 1px solid #fde68a;
+        }
+
+        /* LỊCH GIỖ 12 THÁNG & BANNER ÂM LỊCH */
+        .memorial-today-banner {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1px solid #fde68a;
+            border-left: 5px solid #d97706;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+            box-shadow: 0 2px 8px rgba(217, 119, 6, 0.1);
+        }
+
+        .memorial-today-text {
+            font-size: 0.92rem;
+            color: #78350f;
+            line-height: 1.5;
+        }
+
+        .memorial-today-text b {
+            color: #9a3412;
+        }
+
+        .memorial-stat-badge {
+            background: #d97706;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: bold;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.12);
+        }
+
+        .memorial-view-modes {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .mem-mode-btn {
+            background: #f1f5f9;
+            color: #334155;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .mem-mode-btn:hover {
+            background: #e2e8f0;
+        }
+
+        .mem-mode-btn.active {
+            background: var(--primary-color);
+            color: #fff;
+            border-color: var(--primary-color);
+            box-shadow: 0 2px 6px rgba(139, 0, 0, 0.25);
+        }
+
+        /* THANH 12 NÚT THÁNG */
+        .month-pills-bar {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            padding: 4px 2px 10px;
+            margin-bottom: 12px;
+            scrollbar-width: thin;
+        }
+
+        .month-pill-btn {
+            background: white;
+            border: 1px solid #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .month-pill-btn:hover {
+            border-color: #d97706;
+            color: #d97706;
+        }
+
+        .month-pill-btn.active {
+            background: #d97706;
+            color: white;
+            border-color: #d97706;
+            box-shadow: 0 2px 6px rgba(217, 119, 6, 0.3);
+        }
+
+        .month-pill-btn.is-current-month {
+            border: 2px solid #ea580c;
+            color: #ea580c;
+            background: #fff7ed;
+            font-weight: bold;
+        }
+
+        .month-pill-btn.is-current-month.active {
+            background: #ea580c;
+            color: white;
+        }
+
+        .pill-count-badge {
+            background: rgba(0,0,0,0.1);
+            color: inherit;
+            padding: 1px 6px;
+            border-radius: 10px;
+            font-size: 0.72rem;
+            margin-left: 2px;
+        }
+
+        /* LƯỚI 12 THÁNG (GRID VIEW) */
+        .memorial-grid-12 {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .month-card {
+            background: white;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+            position: relative;
+        }
+
+        .month-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0,0,0,0.09);
+        }
+
+        /* ĐẶC BIỆT LÀM NỔI BẬT THÁNG HIỆN TẠI */
+        .month-card.current-month {
+            border: 2.5px solid #d97706;
+            box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15), 0 8px 25px rgba(217, 119, 6, 0.22);
+            background: linear-gradient(180deg, #fffbeb 0%, #ffffff 70px);
+        }
+
+        .current-month-badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            background: linear-gradient(135deg, #ea580c, #c2410c);
+            color: white;
+            font-size: 0.68rem;
+            font-weight: 800;
+            padding: 3px 10px;
+            border-bottom-left-radius: 8px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+            text-transform: uppercase;
+        }
+
+        .month-card-header {
+            padding: 10px 14px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .month-card.current-month .month-card-header {
+            background: linear-gradient(90deg, #fef3c7, #fde68a);
+            border-bottom-color: #fde68a;
+        }
+
+        .month-title {
+            font-family: 'Merriweather', serif;
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .month-card.current-month .month-title {
+            color: #9a3412;
+        }
+
+        .month-count {
+            font-size: 0.76rem;
+            color: #64748b;
+            font-weight: 600;
+        }
+
+        .month-card-body {
+            padding: 10px 12px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            min-height: 90px;
+        }
+
+        .month-empty {
+            color: #94a3b8;
+            font-size: 0.8rem;
+            font-style: italic;
+            text-align: center;
+            margin: auto;
+            padding: 14px 0;
+        }
+
+        /* MỤC GIỖ TRONG THÁNG */
+        .gio-item {
+            background: #f8fafc;
+            border: 1px solid #f1f5f9;
+            border-left: 3.5px solid #d97706;
+            border-radius: 6px;
+            padding: 8px 10px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .gio-item:hover {
+            background: #fefce8;
+            border-left-color: #b45309;
+            transform: translateX(2px);
+        }
+
+        .gio-item-today {
+            background: #fef2f2 !important;
+            border-left-color: #dc2626 !important;
+            border: 1px solid #fecaca;
+            animation: pulseLight 2s infinite;
+        }
+
+        @keyframes pulseLight {
+            0% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4); }
+            70% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0); }
+        }
+
+        .gio-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 3px;
+        }
+
+        .gio-name {
+            font-weight: 700;
+            font-size: 0.88rem;
+            color: #1e293b;
+        }
+
+        .gio-date-badge {
+            background: #fef3c7;
+            color: #92400e;
+            font-weight: 700;
+            font-size: 0.75rem;
+            padding: 2px 7px;
+            border-radius: 4px;
+            border: 1px solid #fde68a;
+            white-space: nowrap;
+        }
+
+        .gio-item-today .gio-date-badge {
+            background: #dc2626;
+            color: white;
+            border-color: #b91c1c;
+        }
+
+        .gio-sub {
+            font-size: 0.76rem;
+            color: #64748b;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        /* GIAO DIỆN XEM TỪNG THÁNG CHI TIẾT */
+        .single-month-header {
+            background: linear-gradient(135deg, #7A0000 0%, #4A0000 100%);
+            color: #fff;
+            padding: 12px 18px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 5px solid var(--gold);
+        }
+
+        .single-month-header h3 {
+            font-family: 'Merriweather', serif;
+            font-size: 1.1rem;
+            color: var(--gold);
+        }
+
+        /* ADMIN MANAGEMENT CARDS */
+        .admin-user-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+
+        .admin-user-info {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        /* BULK IMPORT STYLES */
+        .bulk-import-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            background: #f8fafc;
+            margin-bottom: 12px;
+        }
+
+        .bulk-textarea {
+            width: 100%;
+            height: 160px;
+            font-family: monospace;
+            font-size: 0.8rem;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
+            resize: vertical;
+        }
+
+        .preview-table-wrap {
+            max-height: 240px;
+            overflow-y: auto;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            margin-top: 10px;
+        }
+
+        .preview-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        .preview-table th, .preview-table td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 8px;
+            text-align: left;
+        }
+
+        .preview-table th {
+            background: #f1f5f9;
+            position: sticky;
+            top: 0;
+            font-weight: 700;
+            color: #334155;
+        }
+
+        /* BADGES */
+        .badge {
+            background: #ef4444;
+            color: white;
+            border-radius: 12px;
+            padding: 2px 7px;
+            font-size: 0.72rem;
+            font-weight: bold;
+            margin-left: 4px;
+        }
+
+        /* MODALS */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            width: 92%;
+            max-width: 600px;
+            max-height: 90vh;
+            border-radius: 12px;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.3);
+            overflow-y: auto;
+            position: relative;
+            animation: slideIn 0.2s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateY(-15px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, #7A0000, #4A0000);
+            color: #FFF8DC;
+            padding: 14px 18px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--accent-color);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .modal-header h3 {
+            font-family: 'Merriweather', serif;
+            font-size: 1.15rem;
+            color: var(--gold);
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            color: #FFF8DC;
+            font-size: 1.6rem;
+            cursor: pointer;
+            line-height: 1;
+            padding: 0 4px;
+        }
+
+        .modal-body {
+            padding: 16px 20px;
+        }
+
+        .modal-footer {
+            padding: 12px 18px;
+            background: #f8fafc;
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid #e2e8f0;
+            position: sticky;
+            bottom: 0;
+            z-index: 10;
+            flex-wrap: wrap;
+        }
+
+        /* FORMS */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+            color: #334155;
+        }
+
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 0.88rem;
+            font-family: inherit;
+        }
+
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            border-color: var(--primary-color);
+            outline: none;
+            box-shadow: 0 0 0 2px rgba(139, 0, 0, 0.15);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        /* VIEW MODAL INFO */
+        .view-avatar-box {
+            text-align: center;
+            margin-bottom: 14px;
+        }
+
+        .view-avatar-img {
+            width: 90px;
+            height: 90px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 3px solid var(--border-color);
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+
+        .info-box-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .info-item {
+            background: #f8fafc;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary-color);
+        }
+
+        .info-item.full-width {
+            grid-column: span 2;
+        }
+
+        .info-label {
+            font-size: 0.72rem;
+            color: #64748b;
+            text-transform: uppercase;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .info-value {
+            font-size: 0.9rem;
+            color: #1e293b;
+            font-weight: 500;
+            word-break: break-word;
+        }
+
+        /* PHOTO UPLOADER */
+        .photo-uploader {
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-bottom: 10px;
+        }
+
+        .photo-uploader:hover {
+            border-color: var(--accent-color);
+            background: #fffdf5;
+        }
+
+        .photo-preview-wrap {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 8px;
+        }
+
+        .photo-preview {
+            width: 65px;
+            height: 65px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+        }
+
+        /* SENDER NOTICE BOX */
+        .sender-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 10px 12px;
+            margin-bottom: 12px;
+        }
+
+        .sender-box h4 {
+            font-size: 0.85rem;
+            color: #1e40af;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        /* REQUEST CARD IN ADMIN MODAL */
+        .request-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px;
+            background: #ffffff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+            margin-bottom: 12px;
+            border-left: 4px solid var(--accent-color);
+        }
+
+        .request-header {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-size: 0.9rem;
+            margin-bottom: 6px;
+            color: var(--primary-color);
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .request-sender-info {
+            font-size: 0.8rem;
+            color: #1d4ed8;
+            background: #eff6ff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .diff-box {
+            font-size: 0.82rem;
+            background: #f8fafc;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px dashed #cbd5e1;
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        /* FOOTER */
+        footer {
+            background: #2A0808;
+            color: #d1d5db;
+            text-align: center;
+            padding: 4px 10px;
+            font-size: 0.72rem;
+            border-top: 1px solid #5A1010;
+        }
+
+        /* MOBILE ADJUSTMENTS */
+        @media (max-width: 640px) {
+            header {
+                padding: 8px 10px;
+            }
+            .header-title h1 {
+                font-size: 1.05rem;
+            }
+            .header-title p {
+                font-size: 0.72rem;
+            }
+            .nav-tab-btn {
+                padding: 5px 8px;
+                font-size: 0.75rem;
+            }
+            button.btn {
+                padding: 6px 10px;
+                font-size: 0.78rem;
+            }
+            .info-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-box-grid {
+                grid-template-columns: 1fr;
+            }
+            .info-item.full-width {
+                grid-column: span 1;
+            }
+            .member-cards-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-title" onclick="switchView('tree')">
+            <h1>🏛️ Họ Nguyễn Lý Nhân</h1>
+            <p>Thôn Hạ Vỹ, Nhân Chính, Lý Nhân, Hà Nam</p>
+        </div>
+
+        <!-- NAV TABS -->
+        <div class="header-nav">
+            <button class="nav-tab-btn active" id="tab-tree" onclick="switchView('tree')">🌳 Cây Phả Hệ</button>
+            <button class="nav-tab-btn" id="tab-list" onclick="switchView('list')">📜 Danh Bạ Họ</button>
+            <button class="nav-tab-btn" id="tab-memorial" onclick="switchView('memorial')">🕯️ Lịch Giỗ Họ</button>
+        </div>
+
+        <!-- USER / ADMIN CONTROLS -->
+        <div class="header-controls">
+            <!-- Báo sinh (Mọi thành viên đều được dùng) -->
+            <button class="btn btn-secondary" onclick="openAddMemberModal(false)">
+                👶 Báo Sinh / Thêm Con
+            </button>
+
+            <!-- Nút Hướng Dẫn -->
+            <button class="btn btn-secondary" onclick="openModal('guideModal')">
+                📖 Hướng Dẫn
+            </button>
+
+            <!-- Huy hiệu vai trò -->
+            <span class="role-badge role-user" id="role-display">👤 Con Cháu</span>
+
+            <!-- Nút Đề Xuất Chờ Duyệt (Admin) -->
+            <button class="btn btn-danger" id="btn-requests" onclick="openRequestsModal()" style="display: none;">
+                📋 Duyệt <span class="badge" id="request-count">0</span>
+            </button>
+
+            <!-- Nút Thêm Mới Trực Tiếp (Admin) -->
+            <button class="btn btn-success" id="btn-admin-add" onclick="openAddMemberModal(true)" style="display: none;">
+                ➕ Thêm Trực Tiếp
+            </button>
+
+            <!-- Nút Phân Quyền Duyệt (Chỉ Root Admin) -->
+            <button class="btn btn-secondary" id="btn-admins" onclick="openAdminsModal()" style="display: none;" title="Quản lý và cấp quyền Người duyệt thứ 2, thứ 3...">
+                👥 Phân Quyền
+            </button>
+
+            <!-- Nút Nhập Hàng Loạt (Excel / Bảng Nhanh) -->
+            <button class="btn btn-secondary" id="btn-bulk-import" onclick="openBulkImportModal()" style="display: none;" title="Nhập hàng loạt thành viên từ bảng tính Excel">
+                📥 Nhập Nhanh
+            </button>
+
+            <!-- Nút Sao Lưu (Admin) -->
+            <button class="btn btn-secondary" id="btn-export" onclick="exportData()" style="display: none;" title="Tải file sao lưu JSON về máy">
+                💾 Sao Lưu
+            </button>
+
+            <!-- Nút Đăng Nhập / Đăng Xuất Admin -->
+            <button class="btn" id="btn-auth" onclick="handleAuthClick()">
+                🔐 Admin
+            </button>
+        </div>
+    </header>
+
+    <!-- VIEW 1: CÂY PHẢ HỆ (BALKAN FAMILYTREE) -->
+    <section id="view-tree" class="view-section active">
+        <div id="tree-container">
+            <div class="tree-toolbar">
+                <label>🔍 <b>Tìm kiếm:</b></label>
+                <input type="text" id="searchInput" placeholder="Nhập tên cụ, bác, anh..." oninput="searchMember()">
+                <label style="margin-left: 6px;">🚩 <b>Thế hệ:</b></label>
+                <select id="genFilter" onchange="filterGeneration()">
+                    <option value="ALL">Tất cả thế hệ (1-9)</option>
+                    <option value="1">Thế hệ 1 (Thủy tổ)</option>
+                    <option value="2">Thế hệ 2</option>
+                    <option value="3">Thế hệ 3</option>
+                    <option value="4">Thế hệ 4</option>
+                    <option value="5">Thế hệ 5</option>
+                    <option value="6">Thế hệ 6</option>
+                    <option value="7">Thế hệ 7</option>
+                    <option value="8">Thế hệ 8</option>
+                    <option value="9">Thế hệ 9</option>
+                </select>
+                <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 0.75rem;" onclick="resetTreeZoom()">
+                    🎯 Căn giữa
+                </button>
+            </div>
+            <div id="tree" style="width:100%; height:100%;"></div>
+        </div>
+    </section>
+
+    <!-- VIEW 2: DANH BẠ GIA TỘC THEO THẾ HỆ (MOBILE-FRIENDLY) -->
+    <section id="view-list" class="view-section">
+        <div class="content-scrollable">
+            <div class="search-filter-bar">
+                <input type="text" id="listSearchInput" placeholder="🔍 Tìm theo họ tên, vợ/chồng..." oninput="renderListView()" style="flex: 1; min-width: 200px;">
+                <select id="listGenFilter" onchange="renderListView()">
+                    <option value="ALL">Tất cả thế hệ (Đời 1 - 9)</option>
+                    <option value="1">Thế hệ 1</option>
+                    <option value="2">Thế hệ 2</option>
+                    <option value="3">Thế hệ 3</option>
+                    <option value="4">Thế hệ 4</option>
+                    <option value="5">Thế hệ 5</option>
+                    <option value="6">Thế hệ 6</option>
+                    <option value="7">Thế hệ 7</option>
+                    <option value="8">Thế hệ 8</option>
+                    <option value="9">Thế hệ 9</option>
+                </select>
+            </div>
+            <div id="list-container">
+                <!-- Sẽ render tự động qua JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- VIEW 3: LỊCH NGÀY GIỖ HỌ (ÂM LỊCH & 12 THÁNG) -->
+    <section id="view-memorial" class="view-section">
+        <div class="content-scrollable">
+            <!-- BANNER ÂM LỊCH HÔM NAY -->
+            <div class="memorial-today-banner" id="memorial-today-banner">
+                <div class="memorial-today-text" id="memorial-today-info">
+                    <!-- Sẽ render tự động qua JS -->
+                    🏮 <b>Đang tải lịch âm dương hôm nay...</b>
+                </div>
+                <div class="memorial-stat-badge" id="memorial-stat-badge">
+                    🕯️ 0 Ngày giỗ trong tháng
+                </div>
+            </div>
+
+            <!-- THANH ĐIỀU KHIỂN & CHUYỂN ĐỔI CHẾ ĐỘ XEM -->
+            <div class="search-filter-bar" style="justify-content: space-between;">
+                <div class="memorial-view-modes">
+                    <button class="mem-mode-btn active" id="btn-mode-grid12" onclick="switchMemorialMode('grid12')">
+                        🗓️ 12 Tháng Toàn Cảnh
+                    </button>
+                    <button class="mem-mode-btn" id="btn-mode-single" onclick="switchMemorialMode('single')">
+                        📆 Xem Từng Tháng
+                    </button>
+                    <button class="mem-mode-btn" id="btn-mode-list" onclick="switchMemorialMode('list')">
+                        📜 Danh Sách Đầy Đủ
+                    </button>
+                </div>
+                <div style="flex: 1; max-width: 320px; min-width: 180px;">
+                    <input type="text" id="memorialSearchInput" placeholder="🔍 Tìm tên cụ, ngày giỗ, nơi an táng..." oninput="handleMemorialSearch()" style="width: 100%;">
+                </div>
+            </div>
+
+            <!-- THANH CHỌN NHANH 12 THÁNG -->
+            <div class="month-pills-bar" id="month-pills-bar">
+                <!-- 12 nút tháng render qua JS -->
+            </div>
+
+            <!-- KHUNG CHỨA GIAO DIỆN LỊCH GIỖ -->
+            <div id="memorial-container">
+                <!-- Sẽ render tự động qua JS theo chế độ đang chọn -->
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        Gia Phả Họ Nguyễn - Thôn Hạ Vỹ, Lý Nhân, Hà Nam • Phiên bản 2.0 (Bảo mật Cloud Firebase)
+    </footer>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- 1. MODAL: CHI TIẾT THÀNH VIÊN -->
+    <div class="modal" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="view-name">Thông tin thành viên</h3>
+                <button class="close-btn" onclick="closeModal('viewModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="view-avatar-box">
+                    <img id="view-img" class="view-avatar-img" src="" alt="Chân dung">
+                </div>
+                <div class="info-box-grid">
+                    <div class="info-item">
+                        <div class="info-label">Thế hệ</div>
+                        <div class="info-value" id="view-gen"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Giới tính</div>
+                        <div class="info-value" id="view-gender"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Ngày sinh</div>
+                        <div class="info-value" id="view-dob"></div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Ngày mất (Tạ thế)</div>
+                        <div class="info-value" id="view-dod" style="color:#b91c1c; font-weight:bold;"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Vợ / Chồng</div>
+                        <div class="info-value" id="view-spouse"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Nơi hạ táng / Phần mộ</div>
+                        <div class="info-value" id="view-burial"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Con cái (Trực hệ)</div>
+                        <div class="info-value" id="view-children"></div>
+                    </div>
+                    <div class="info-item full-width">
+                        <div class="info-label">Ghi chú bổ sung</div>
+                        <div class="info-value" id="view-notes"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('viewModal')">Đóng</button>
+                <button class="btn btn-danger" id="btn-delete-member" onclick="deleteCurrentMember()" style="display:none;">
+                    🗑️ Xóa
+                </button>
+                <button class="btn btn-success" id="btn-edit-action" onclick="openSuggestEditModal()">
+                    📝 Đề xuất sửa
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. MODAL: ĐỀ XUẤT SỬA THÔNG TIN -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="edit-modal-title">Đề xuất cập nhật thông tin</h3>
+                <button class="close-btn" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Hộp người gửi (Chỉ hiện khi là Con Cháu) -->
+                <div class="sender-box" id="edit-sender-box">
+                    <h4>👤 Thông tin người gửi đề xuất (Bắt buộc)</h4>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Họ tên của bạn (*):</label>
+                            <input type="text" id="edit-sender-name" placeholder="VD: Nguyễn Văn Nam">
+                        </div>
+                        <div class="form-group">
+                            <label>Số điện thoại liên hệ (*):</label>
+                            <input type="tel" id="edit-sender-phone" placeholder="VD: 0987xxxxxx">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Quan hệ với thành viên này:</label>
+                        <input type="text" id="edit-sender-relation" placeholder="VD: Con trai trưởng, Cháu nội...">
+                    </div>
+                </div>
+
+                <form id="editForm" onsubmit="event.preventDefault(); submitEditForm();">
+                    <input type="hidden" id="edit-id">
+                    <input type="hidden" id="edit-img-data">
+
+                    <!-- Tải ảnh trực tiếp từ điện thoại -->
+                    <div class="form-group">
+                        <label>Chân dung (Tải ảnh từ điện thoại / máy tính):</label>
+                        <div class="photo-uploader" onclick="document.getElementById('edit-file-input').click()">
+                            <span>📷 Nhấp vào đây để chọn ảnh hoặc chụp ảnh</span>
+                            <input type="file" id="edit-file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'edit-preview', 'edit-img-data')">
+                        </div>
+                        <div class="photo-preview-wrap" id="edit-preview-wrap" style="display: none;">
+                            <img id="edit-preview" class="photo-preview" src="" alt="Xem trước">
+                            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;" onclick="clearUploadedImage('edit-preview', 'edit-img-data', 'edit-preview-wrap')">
+                                ❌ Bỏ ảnh này
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Họ và Tên (*):</label>
+                        <input type="text" id="edit-name" required>
+                    </div>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Thế hệ:</label>
+                            <input type="number" id="edit-gen" min="1" max="9" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Giới tính:</label>
+                            <select id="edit-gender">
+                                <option value="male">Nam (Cụ Ông / Bác / Anh)</option>
+                                <option value="female">Nữ (Cụ Bà / Cô / Chị)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Ngày sinh:</label>
+                            <input type="text" id="edit-dob" placeholder="VD: 15/04/1950">
+                        </div>
+                        <div class="form-group">
+                            <label>Ngày mất (ghi rõ AL nếu là Âm lịch):</label>
+                            <input type="text" id="edit-dod" placeholder="VD: 14/5 (AL)">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Vợ / Chồng (Họ tên):</label>
+                        <input type="text" id="edit-spouse">
+                    </div>
+                    <div class="form-group">
+                        <label>Nơi hạ táng / An táng:</label>
+                        <input type="text" id="edit-burial" placeholder="VD: Nghĩa trang Thôn Hạ Vỹ, Ninh Bình...">
+                    </div>
+                    <div class="form-group">
+                        <label>Ghi chú bổ sung:</label>
+                        <textarea id="edit-notes" placeholder="Chức sắc, tiểu sử, con cháu..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('editModal')">Hủy</button>
+                <button class="btn btn-success" onclick="submitEditForm()">💾 Gửi Cập Nhật</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. MODAL: THÊM CON CHÁU / BÁO SINH MỚI -->
+    <div class="modal" id="addModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="add-modal-title">👶 Báo Sinh / Thêm Con Cháu Mới</h3>
+                <button class="close-btn" onclick="closeModal('addModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <!-- Hộp người gửi khi con cháu báo sinh -->
+                <div class="sender-box" id="add-sender-box">
+                    <h4>👤 Thông tin người đề xuất thêm con cháu (Bắt buộc)</h4>
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Họ tên của bạn (*):</label>
+                            <input type="text" id="add-sender-name" placeholder="VD: Nguyễn Văn Nam">
+                        </div>
+                        <div class="form-group">
+                            <label>Số điện thoại liên hệ (*):</label>
+                            <input type="tel" id="add-sender-phone" placeholder="VD: 0987xxxxxx">
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-bottom:0;">
+                        <label>Mối quan hệ:</label>
+                        <input type="text" id="add-sender-relation" placeholder="VD: Bố/Mẹ của cháu...">
+                    </div>
+                </div>
+
+                <form id="addForm" onsubmit="event.preventDefault(); submitAddForm();">
+                    <input type="hidden" id="add-img-data">
+
+                    <div class="form-group">
+                        <label>Chọn Cha / Mẹ (Trực hệ thuộc Họ Nguyễn) (*):</label>
+                        <select id="add-parent-id" required onchange="autoFillGeneration()"></select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Họ và Tên con cháu (*):</label>
+                        <input type="text" id="add-name" required placeholder="VD: Nguyễn Văn B">
+                    </div>
+
+                    <!-- Tải ảnh trực tiếp -->
+                    <div class="form-group">
+                        <label>Chân dung (Tải ảnh từ điện thoại):</label>
+                        <div class="photo-uploader" onclick="document.getElementById('add-file-input').click()">
+                            <span>📷 Chọn ảnh hoặc chụp ảnh từ máy</span>
+                            <input type="file" id="add-file-input" accept="image/*" style="display: none;" onchange="handleImageUpload(event, 'add-preview', 'add-img-data')">
+                        </div>
+                        <div class="photo-preview-wrap" id="add-preview-wrap" style="display: none;">
+                            <img id="add-preview" class="photo-preview" src="" alt="Xem trước">
+                            <button type="button" class="btn btn-secondary" style="font-size: 0.75rem; padding: 4px 8px;" onclick="clearUploadedImage('add-preview', 'add-img-data', 'add-preview-wrap')">
+                                ❌ Bỏ ảnh này
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Thế hệ:</label>
+                            <input type="number" id="add-gen" min="1" max="9" value="8" readonly style="background:#f1f5f9;">
+                        </div>
+                        <div class="form-group">
+                            <label>Giới tính:</label>
+                            <select id="add-gender">
+                                <option value="male">Nam (Trai)</option>
+                                <option value="female">Nữ (Gái)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="info-grid">
+                        <div class="form-group">
+                            <label>Ngày tháng năm sinh:</label>
+                            <input type="text" id="add-dob" placeholder="VD: 01/06/2024">
+                        </div>
+                        <div class="form-group">
+                            <label>Vợ / Chồng (nếu có):</label>
+                            <input type="text" id="add-spouse" placeholder="Chưa có">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ghi chú bổ sung:</label>
+                        <textarea id="add-notes" placeholder="Con thứ mấy trong gia đình, nơi cư trú..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('addModal')">Hủy</button>
+                <button class="btn btn-success" id="btn-save-new" onclick="submitAddForm()">
+                    ➕ Gửi Đề Xuất
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. MODAL: ĐĂNG NHẬP ADMIN (FIREBASE AUTH) -->
+    <div class="modal" id="authModal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>🔐 Đăng Nhập Quản Trị Viên</h3>
+                <button class="close-btn" onclick="closeModal('authModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #64748b; margin-bottom: 14px;">
+                    Dành riêng cho Ban Quản Trị / Trưởng Tộc duyệt thông tin gia phả.
+                </p>
+                <div id="auth-error" style="display:none; background:#fee2e2; color:#b91c1c; padding:8px 12px; border-radius:6px; font-size:0.82rem; margin-bottom:12px;"></div>
+                <form onsubmit="event.preventDefault(); executeLogin();">
+                    <div class="form-group">
+                        <label>Email Đăng Nhập:</label>
+                        <input type="email" id="auth-email" placeholder="VD: email_cua_ban@gmail.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Mật khẩu:</label>
+                        <input type="password" id="auth-password" placeholder="Nhập mật khẩu quản trị..." required>
+                    </div>
+                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; padding: 10px; margin-top: 8px;">
+                        Đăng Nhập Ngay
+                    </button>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('authModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 5. MODAL: DANH SÁCH ĐỀ XUẤT CHỜ DUYỆT (ADMIN) -->
+    <div class="modal" id="requestsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>📋 Đề Xuất Chờ Phê Duyệt</h3>
+                <button class="close-btn" onclick="closeModal('requestsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="requests-container">
+                    <p style="text-align: center; color: #64748b; padding: 20px;">Hiện không có đề xuất nào đang chờ duyệt.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('requestsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. MODAL: HƯỚNG DẪN SỬ DỤNG -->
+    <div class="modal" id="guideModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📖 Hướng Dẫn Sử Dụng Gia Phả</h3>
+                <button class="close-btn" onclick="closeModal('guideModal')">&times;</button>
+            </div>
+            <div class="modal-body" style="font-size: 0.9rem; line-height: 1.6;">
+                <h4 style="color: var(--primary-color); margin-bottom: 4px;">1. Dành cho Con Cháu xem gia phả:</h4>
+                <ul style="padding-left: 20px; margin-bottom: 14px;">
+                    <li><b>Chế độ xem:</b> Bạn có thể bấm vào <b>🌳 Cây Phả Hệ</b> để ngắm sơ đồ toàn thể, hoặc chọn <b>📜 Danh Bạ Họ</b> để xem danh sách dễ đọc trên điện thoại.</li>
+                    <li><b>Lịch Giỗ:</b> Bấm vào tab <b>🕯️ Lịch Giỗ Họ</b> để xem danh sách ngày giỗ các cụ theo Âm lịch.</li>
+                    <li><b>Báo Sinh:</b> Khi gia đình có em bé mới sinh, bấm nút <b>👶 Báo Sinh / Thêm Con</b> ở góc trên để gửi thông tin cho Ban Quản Trị cập nhật vào phả hệ.</li>
+                    <li><b>Đề xuất sửa:</b> Nhấp vào tên thành viên ➔ Bấm <b>📝 Đề xuất sửa</b> để đính chính ngày sinh, ngày mất, phần mộ hoặc tải ảnh chân dung mới lên.</li>
+                </ul>
+
+                <h4 style="color: var(--primary-color); margin-bottom: 4px;">2. Dành cho Ban Quản Trị & Ban Thu Thập:</h4>
+                <ul style="padding-left: 20px;">
+                    <li><b>Quản Lý Hệ Thống:</b> Anh Nguyễn Toàn Thắng (📞 094 999 1515) phụ trách toàn diện hệ thống kỹ thuật và phân quyền chỉ định chức danh.</li>
+                    <li><b>Đăng nhập:</b> Bấm vào nút <b>🔐 Admin</b> trên góc màn hình và nhập Email + Mật khẩu quản trị.</li>
+                    <li><b>Duyệt đề xuất:</b> Khi có đề xuất mới, nút <b>📋 Duyệt</b> sẽ hiển thị số lượng đề xuất màu đỏ để kiểm duyệt.</li>
+                    <li><b>Ban Thu Thập:</b> Thành viên đi thu thập các chi được cấp quyền dùng nút <b>➕ Thêm Trực Tiếp</b> và <b>📥 Nhập Nhanh</b> để nạp dữ liệu từ Excel vào phả hệ nhanh chóng.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('guideModal')">Đã Hiểu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 7. MODAL: QUẢN LÝ PHÂN QUYỀN BAN QUẢN TRỊ & BAN THU THẬP -->
+    <div class="modal" id="adminsModal">
+        <div class="modal-content" style="max-width: 700px;">
+            <div class="modal-header">
+                <h3>👥 Quản Lý Phân Quyền Ban Quản Trị & Ban Thu Thập</h3>
+                <button class="close-btn" onclick="closeModal('adminsModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 14px;">
+                    <b>Quản Lý Hệ Thống (Nguyễn Toàn Thắng)</b> có thể chỉ định ai là Trưởng Ban, Phó Ban, Người Duyệt Thông Tin hoặc Ban Thu Thập để mọi người trong họ cùng đi thu thập và cập nhật thông tin phả hệ.
+                </p>
+
+                <!-- Danh sách Ban Quản Trị hiện tại -->
+                <div style="margin-bottom: 18px;">
+                    <h4 style="font-size: 0.9rem; color: var(--primary-color); margin-bottom: 8px;">
+                        🛡️ Danh Sách Ban Quản Trị & Đội Ngũ Thu Thập:
+                    </h4>
+                    <div id="admins-list-container">
+                        <!-- Sẽ render qua JS -->
+                    </div>
+                </div>
+
+                <!-- Form cấp quyền người mới -->
+                <div class="sender-box" style="background: #fdfbf7; border-color: #d4af37;">
+                    <h4 style="color: #92400e;">➕ Thêm & Phân Quyền Thành Viên Mới</h4>
+                    <p style="font-size: 0.78rem; color: #64748b; margin-bottom: 10px;">
+                        Hệ thống sẽ cấp quyền theo đúng chức danh bạn chỉ định và tạo tài khoản đăng nhập cho người này.
+                    </p>
+                    <form id="addAdminForm" onsubmit="event.preventDefault(); submitNewAdmin();">
+                        <div class="info-grid">
+                            <div class="form-group">
+                                <label>Họ và Tên (*):</label>
+                                <input type="text" id="new-admin-name" placeholder="VD: Bác Nguyễn Văn Nam" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Số điện thoại liên hệ (*):</label>
+                                <input type="tel" id="new-admin-phone" placeholder="VD: 0987654321" required>
+                            </div>
+                        </div>
+                        <div class="info-grid">
+                            <div class="form-group">
+                                <label>Email đăng nhập (*):</label>
+                                <input type="email" id="new-admin-email" placeholder="VD: nguyenb@gmail.com" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Mật khẩu cấp cho người này (*):</label>
+                                <input type="password" id="new-admin-password" placeholder="Tối thiểu 6 ký tự" required minlength="6">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Vai trò / Chức danh phân công:</label>
+                            <select id="new-admin-role">
+                                <option value="TRUONG_BAN">👑 Trưởng Ban Quản Trị (Toàn quyền nội dung, duyệt & phân công)</option>
+                                <option value="PHO_BAN">🛡️ Phó Ban Quản Trị (Duyệt tin, thêm/sửa trực tiếp, sao lưu)</option>
+                                <option value="MODERATOR" selected>📋 Người Duyệt Thông Tin (Chuyên duyệt đề xuất con cháu)</option>
+                                <option value="COLLABORATOR">📝 Ban Thu Thập Thông Tin (Thành viên đi thu thập: Nhập nhanh & Thêm trực tiếp)</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; padding: 9px;">
+                            ➕ Cấp Quyền & Tạo Tài Khoản Cho Người Này
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Hướng dẫn dự phòng -->
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; font-size: 0.8rem; color: #1e40af; margin-top: 12px;">
+                    <b>💡 Hướng dẫn gửi cho người được phân quyền:</b>
+                    <ol style="margin-left: 18px; margin-top: 4px;">
+                        <li>Gửi đường link trang web cho người thứ 2.</li>
+                        <li>Bảo họ bấm nút <b>🔐 Admin</b> trên góc màn hình và nhập đúng Email + Mật khẩu bạn vừa đặt ở trên.</li>
+                        <li>Sau khi đăng nhập, họ sẽ thấy nút <b>📋 Duyệt</b> màu đỏ để duyệt thông tin con cháu gửi về.</li>
+                    </ol>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal('adminsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 8. MODAL: NHẬP DỮ LIỆU HÀNG LOẠT (BULK IMPORT) -->
+    <div class="modal" id="importModal">
+        <div class="modal-content" style="max-width: 850px;">
+            <div class="modal-header">
+                <h3>📥 Nhập Dữ Liệu Hàng Loạt (Excel / Copy-Paste)</h3>
+                <button class="close-btn" onclick="closeModal('importModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #475569; margin-bottom: 12px;">
+                    Phương án tối ưu để cập nhật đồng loạt nhiều thành viên cùng lúc: Copy các hàng từ file Excel hoặc Google Sheets rồi dán vào ô dưới đây.
+                </p>
+
+                <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                    <button class="btn btn-secondary" onclick="downloadExcelTemplate()">
+                        📄 Tải Bảng Mẫu Excel / CSV
+                    </button>
+                    <button class="btn btn-secondary" onclick="fillSampleImportData()">
+                        📝 Dán Dữ Liệu Mẫu Thử Nghiệm
+                    </button>
+                </div>
+
+                <div class="bulk-import-box">
+                    <label style="font-size: 0.82rem; font-weight: 700; color: #334155; margin-bottom: 6px; display: block;">
+                        Dán dữ liệu từ Excel vào đây (Các cột cách nhau bằng phím Tab):
+                    </label>
+                    <textarea id="bulkImportInput" class="bulk-textarea" placeholder="Họ và Tên	Thế hệ	Tên Cha/Mẹ	Giới tính	Ngày sinh	Ngày mất (AL)	Vợ/Chồng	Nơi an táng	Ghi chú
+Nguyễn Văn An	5	Nguyễn Văn Kế	Nam	15/04/1960		Trần Thị Mai	Hà Nam	Chi trưởng
+Nguyễn Thị Bình	5	Nguyễn Văn Kế	Nữ	10/08/1965	15/8 (AL)	Lê Văn C	Ninh Bình	Bà cô"></textarea>
+                    
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 8px; flex-wrap: wrap; gap: 8px;">
+                        <span style="font-size: 0.78rem; color: #64748b;">
+                            * Thứ tự cột: <b>Họ tên | Đời | Tên Cha/Mẹ | Giới tính | Sinh | Mất | Vợ/Chồng | An táng | Ghi chú</b>
+                        </span>
+                        <div style="display: flex; gap: 6px;">
+                            <button class="btn btn-secondary" onclick="document.getElementById('bulkImportInput').value=''; document.getElementById('bulkImportPreview').innerHTML='';" style="font-size:0.75rem; padding:4px 8px;">
+                                🧹 Xóa trắng
+                            </button>
+                            <button class="btn" onclick="parseBulkInputData()">
+                                👁️ Kiểm Tra & Xem Trước
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Xem trước kết quả parse -->
+                <div id="bulkImportPreview"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal('importModal')">Hủy</button>
+                <button class="btn btn-success" id="btn-save-bulk" onclick="executeBulkSave()" style="display: none;">
+                    ✅ Xác Nhận Lưu Toàn Bộ Vào Phả Hệ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <script>
+        // Cấu hình Firebase mới chính chủ ntthang.tc@tdapt.com
+        const firebaseConfig = {
+            apiKey: atob("QUl6YVN5RGVzZ3lwU3NsU2FyazhIdlFlU1JtaUdrSHE0Y1BPS3Nj"),
+            authDomain: "giapha-honguyen.firebaseapp.com",
+            databaseURL: "https://giapha-honguyen-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "giapha-honguyen",
+            storageBucket: "giapha-honguyen.firebasestorage.app",
+            messagingSenderId: "80694043619",
+            appId: "1:80694043619:web:e5de0ef559b3bf35d9f6d6"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const auth = firebase.auth();
+
+        const DEFAULT_AVATAR = "https://cdn.balkan.app/shared/default-user.png";
+        const ROOT_ADMIN_EMAIL = "ntthang.tc@tdapt.com";
+        const SUPER_ADMIN_PHONES = ['094 999 1515', '0949991515'];
+
+        let familyMembers = [];
+        let pendingRequests = [];
+        let adminList = {
+            'nguyentoanthang_master': {
+                name: 'Nguyễn Toàn Thắng',
+                email: 'ntthang.tc@tdapt.com',
+                phone: '094 999 1515',
+                role: 'SUPER_ADMIN',
+                title: 'Quản Lý Hệ Thống',
+                addedAt: 'Khởi tạo hệ thống'
+            }
+        }; // Node /admins từ Firebase
+        let currentRole = 'USER'; // 'USER', 'SUPER_ADMIN', 'TRUONG_BAN', 'PHO_BAN', 'MODERATOR', 'COLLABORATOR'
+        let currentUser = null;
+        let currentSelectedId = null;
+        let familyTreeInstance = null;
+        let activeView = 'tree'; // 'tree', 'list', 'memorial'
+
+        // Trạng thái Lịch Giỗ Họ
+        let currentMemorialMode = 'grid12'; // 'grid12' (12 tháng), 'single' (từng tháng), 'list' (danh sách)
+        let selectedMemorialMonth = 1;
+        let memorialSearchQuery = '';
+        let todaySolar = new Date();
+        let todayLunar = null;
+
+        // ==================== THUẬT TOÁN ÂM - DƯƠNG LỊCH CHUẨN VIỆT NAM (HỒ NGỌC ĐỨC) ====================
+        function jdFromDate(dd, mm, yy) {
+            let a = Math.floor((14 - mm) / 12);
+            let y = yy + 4800 - a;
+            let m = mm + 12 * a - 3;
+            let jd = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045;
+            if (jd < 2299161) {
+                jd = dd + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - 32083;
+            }
+            return jd;
+        }
+
+        function getNewMoonDay(k, timeZone = 7.0) {
+            let T = k / 1236.85;
+            let T2 = T * T;
+            let T3 = T2 * T;
+            let dr = Math.PI / 180;
+            let Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
+            Jd1 = Jd1 + 0.00033 * Math.sin((166.56 + 132.87 * T - 0.009173 * T2) * dr);
+            let M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
+            let Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
+            let F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.0000239 * T3;
+            let C1 = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * dr * M);
+            C1 = C1 - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(2 * dr * Mpr);
+            C1 = C1 - 0.0004 * Math.sin(3 * dr * Mpr);
+            C1 = C1 + 0.0104 * Math.sin(2 * dr * F) - 0.0051 * Math.sin((M + Mpr) * dr);
+            C1 = C1 - 0.0074 * Math.sin((M - Mpr) * dr) + 0.0004 * Math.sin((2 * F + M) * dr);
+            C1 = C1 - 0.0004 * Math.sin((2 * F - M) * dr) - 0.0006 * Math.sin((2 * F + Mpr) * dr);
+            C1 = C1 + 0.0010 * Math.sin((2 * F - Mpr) * dr) + 0.0005 * Math.sin((M + 2 * Mpr) * dr);
+            let JdNew = Jd1 + C1;
+            return Math.floor(JdNew + 0.5 + timeZone / 24);
+        }
+
+        function getSunLongitude(jdn, timeZone = 7.0) {
+            let T = (jdn - 2451545.0 + 0.5 - timeZone / 24) / 36525;
+            let T2 = T * T;
+            let dr = Math.PI / 180;
+            let L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
+            let M = 357.52910 + 35999.05029 * T - 0.0001537 * T2;
+            let C = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(M * dr);
+            C = C + (0.019993 - 0.000101 * T) * Math.sin(2 * M * dr) + 0.000290 * Math.sin(3 * M * dr);
+            let theta = L0 + C;
+            theta = theta * dr;
+            theta = theta - Math.PI * 2 * Math.floor(theta / (Math.PI * 2));
+            return Math.floor(theta / Math.PI * 6);
+        }
+
+        function getLunarMonth11(yy, timeZone = 7.0) {
+            let off = jdFromDate(31, 12, yy) - 2415021;
+            let k = Math.floor(off / 29.530588853);
+            let nm = getNewMoonDay(k, timeZone);
+            let sunLong = getSunLongitude(nm, timeZone);
+            if (sunLong >= 9) {
+                nm = getNewMoonDay(k - 1, timeZone);
+            }
+            return nm;
+        }
+
+        function convertSolar2Lunar(dd, mm, yyyy, timeZone = 7.0) {
+            let dayNumber = jdFromDate(dd, mm, yyyy);
+            let k = Math.floor((dayNumber - 2415021.076998695) / 29.530588853);
+            let monthStart = getNewMoonDay(k + 1, timeZone);
+            if (monthStart > dayNumber) {
+                monthStart = getNewMoonDay(k, timeZone);
+            }
+            let a11 = getLunarMonth11(yyyy, timeZone);
+            let b11 = a11;
+            let year = yyyy;
+            if (a11 >= monthStart) {
+                year = yyyy - 1;
+                a11 = getLunarMonth11(year, timeZone);
+            } else {
+                b11 = getLunarMonth11(yyyy + 1, timeZone);
+            }
+            let lunarDay = dayNumber - monthStart + 1;
+            let diff = Math.floor((monthStart - a11) / 29);
+            let lunarMonth = diff + 11;
+            if (lunarMonth > 12) {
+                lunarMonth = lunarMonth - 12;
+            }
+            if (lunarMonth >= 11 && diff < 4) {
+                year -= 1;
+            }
+            return { day: lunarDay, month: lunarMonth, year: year };
+        }
+
+        // ==================== PHÂN TÍCH NGÀY MẤT (DOD PARSER) ====================
+        function parseDeathDate(dodStr) {
+            if (!dodStr || typeof dodStr !== 'string') return null;
+            const s = dodStr.trim();
+            if (s.toLowerCase().includes('còn sống') || s.toLowerCase().includes('chưa rõ') || s === '') return null;
+
+            // Tìm ngày và tháng dạng DD/MM hoặc D/M
+            const match = s.match(/(\d{1,2})[\/\-](\d{1,2})(?:[\/\-](\d{2,4}))?/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10);
+                const year = match[3] ? parseInt(match[3], 10) : null;
+                const isLunar = s.toUpperCase().includes('AL') || s.toLowerCase().includes('âm');
+                if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                    return { day, month, year, isLunar, raw: dodStr };
+                }
+            }
+
+            // Chỉ có năm e.g. "1985"
+            const yearMatch = s.match(/^(\d{4})$/);
+            if (yearMatch) {
+                return { day: null, month: 0, year: parseInt(yearMatch[1], 10), isLunar: false, raw: dodStr };
+            }
+
+            return { day: null, month: 0, year: null, isLunar: false, raw: dodStr };
+        }
+
+        // Khởi chạy khi load trang
+        window.onload = function() {
+            // Tính toán ngày âm lịch hôm nay
+            todaySolar = new Date();
+            todayLunar = convertSolar2Lunar(todaySolar.getDate(), todaySolar.getMonth() + 1, todaySolar.getFullYear());
+            selectedMemorialMonth = todayLunar.month;
+
+            // Tự động nạp email đã lưu nếu có
+            const savedEmail = localStorage.getItem('giapha_admin_email');
+            const authEmailInput = document.getElementById('auth-email');
+            if (savedEmail && authEmailInput) {
+                authEmailInput.value = savedEmail;
+            }
+
+            listenAuth();
+            listenFirebaseData();
+        };
+
+        // Lắng nghe trạng thái đăng nhập Firebase
+        function listenAuth() {
+            auth.onAuthStateChanged((user) => {
+                currentUser = user;
+                evaluateUserRole();
+            });
+        }
+
+        // Quyền hạn theo vai trò
+        function canDirectEdit() {
+            return ['SUPER_ADMIN', 'TRUONG_BAN', 'ROOT_ADMIN', 'PHO_BAN', 'CO_ADMIN', 'MODERATOR', 'COLLABORATOR'].includes(currentRole);
+        }
+
+        function canApprove() {
+            return ['SUPER_ADMIN', 'TRUONG_BAN', 'ROOT_ADMIN', 'PHO_BAN', 'CO_ADMIN', 'MODERATOR'].includes(currentRole);
+        }
+
+        function canDeleteMember() {
+            return ['SUPER_ADMIN', 'TRUONG_BAN', 'ROOT_ADMIN'].includes(currentRole);
+        }
+
+        function canManageAdmins() {
+            return ['SUPER_ADMIN', 'TRUONG_BAN', 'ROOT_ADMIN'].includes(currentRole);
+        }
+
+        // Đánh giá vai trò người dùng hiện tại
+        function evaluateUserRole() {
+            if (!currentUser) {
+                currentRole = 'USER';
+            } else {
+                const email = (currentUser.email || '').toLowerCase().trim();
+                const safeKey = email.replace(/\./g, '_');
+                const adminRecord = adminList[safeKey];
+
+                // Kiểm tra Quản Lý Hệ Thống (Nguyễn Toàn Thắng)
+                const isSuper = (
+                    email === ROOT_ADMIN_EMAIL.toLowerCase() ||
+                    (adminRecord && adminRecord.role === 'SUPER_ADMIN') ||
+                    (adminRecord && SUPER_ADMIN_PHONES.includes(adminRecord.phone)) ||
+                    (adminRecord && adminRecord.name === 'Nguyễn Toàn Thắng')
+                );
+
+                if (isSuper) {
+                    currentRole = 'SUPER_ADMIN';
+                } else if (adminRecord && adminRecord.role) {
+                    currentRole = adminRecord.role;
+                } else {
+                    // Nếu tài khoản mới đăng nhập mà email có dạng ntthang/toanthang hoặc hệ thống chưa có ai ngoài mặc định
+                    // -> Tự động nhận diện là anh Thắng quản lý hệ thống và lưu cập nhật email mới vào node admins
+                    if (email.includes('ntthang') || email.includes('toanthang') || Object.keys(adminList).length <= 1) {
+                        currentRole = 'SUPER_ADMIN';
+                        db.ref('admins/' + safeKey).set({
+                            name: 'Nguyễn Toàn Thắng',
+                            email: email,
+                            phone: '094 999 1515',
+                            role: 'SUPER_ADMIN',
+                            title: 'Quản Lý Hệ Thống',
+                            addedAt: new Date().toLocaleString('vi-VN')
+                        });
+                    } else {
+                        // Tài khoản được cấp bởi Trưởng ban/Console: mặc định Người Duyệt
+                        currentRole = 'MODERATOR';
+                    }
+                }
+            }
+            updateRoleUI();
+        }
+
+        // Lắng nghe dữ liệu Realtime Database
+        function listenFirebaseData() {
+            // 1. Dữ liệu thành viên gia phả
+            db.ref('members').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (Array.isArray(data)) {
+                        familyMembers = data.filter(Boolean);
+                    } else {
+                        familyMembers = Object.values(data);
+                    }
+                } else {
+                    familyMembers = [];
+                }
+                refreshCurrentView();
+            });
+
+            // 2. Dữ liệu đề xuất duyệt
+            db.ref('requests').on('value', (snapshot) => {
+                const reqData = snapshot.val();
+                pendingRequests = reqData ? Object.values(reqData) : [];
+                updateRequestsBadge();
+                if (document.getElementById('requestsModal').classList.contains('active')) {
+                    renderRequestsList();
+                }
+            });
+
+            // 3. Dữ liệu phân quyền Ban Quản Trị
+            db.ref('admins').on('value', (snapshot) => {
+                adminList = snapshot.val() || {};
+                
+                // Đảm bảo thông tin Quản Lý Hệ Thống Nguyễn Toàn Thắng luôn có mặt
+                const hasSuper = Object.values(adminList).some(a => a.role === 'SUPER_ADMIN' || a.name === 'Nguyễn Toàn Thắng');
+                if (!hasSuper) {
+                    adminList['nguyentoanthang_master'] = {
+                        name: 'Nguyễn Toàn Thắng',
+                        email: ROOT_ADMIN_EMAIL,
+                        phone: '094 999 1515',
+                        role: 'SUPER_ADMIN',
+                        title: 'Quản Lý Hệ Thống',
+                        addedAt: 'Khởi tạo hệ thống'
+                    };
+                }
+
+                evaluateUserRole();
+                const adminsModalEl = document.getElementById('adminsModal');
+                if (adminsModalEl && adminsModalEl.classList.contains('active')) {
+                    renderAdminsList();
+                }
+            }, (error) => {
+                console.warn("Lưu ý: Không thể tải danh sách admins từ Firebase:", error.message);
+                evaluateUserRole();
+            });
+        }
+
+        // Cập nhật giao diện theo vai trò người dùng
+        function updateRoleUI() {
+            const roleBadge = document.getElementById('role-display');
+            const authBtn = document.getElementById('btn-auth');
+            const reqBtn = document.getElementById('btn-requests');
+            const adminAddBtn = document.getElementById('btn-admin-add');
+            const exportBtn = document.getElementById('btn-export');
+            const adminsBtn = document.getElementById('btn-admins');
+            const bulkImportBtn = document.getElementById('btn-bulk-import');
+
+            if (!currentUser || currentRole === 'USER') {
+                roleBadge.className = 'role-badge role-user';
+                roleBadge.innerHTML = '👤 Con Cháu';
+                authBtn.innerHTML = '🔐 Admin';
+                authBtn.className = 'btn';
+
+                reqBtn.style.display = 'none';
+                adminAddBtn.style.display = 'none';
+                exportBtn.style.display = 'none';
+                bulkImportBtn.style.display = 'none';
+                adminsBtn.style.display = 'none';
+                updateRequestsBadge();
+                return;
+            }
+
+            // Đã đăng nhập
+            authBtn.innerHTML = '🚪 Đăng Xuất';
+            authBtn.className = 'btn btn-secondary';
+
+            const safeKey = (currentUser.email || '').replace(/\./g, '_');
+            const myInfo = adminList[safeKey] || {};
+            const displayName = myInfo.name || currentUser.email.split('@')[0];
+
+            if (currentRole === 'SUPER_ADMIN') {
+                roleBadge.className = 'role-badge role-super-admin';
+                roleBadge.innerHTML = `⚙️ Quản Lý Hệ Thống: <b>${myInfo.name || 'Nguyễn Toàn Thắng'}</b>`;
+                
+                reqBtn.style.display = 'inline-flex';
+                adminAddBtn.style.display = 'inline-flex';
+                exportBtn.style.display = 'inline-flex';
+                bulkImportBtn.style.display = 'inline-flex';
+                adminsBtn.style.display = 'inline-flex';
+            } else if (currentRole === 'TRUONG_BAN' || currentRole === 'ROOT_ADMIN') {
+                roleBadge.className = 'role-badge role-truong-ban';
+                roleBadge.innerHTML = `👑 Trưởng Ban: <b>${displayName}</b>`;
+
+                reqBtn.style.display = 'inline-flex';
+                adminAddBtn.style.display = 'inline-flex';
+                exportBtn.style.display = 'inline-flex';
+                bulkImportBtn.style.display = 'inline-flex';
+                adminsBtn.style.display = 'inline-flex';
+            } else if (currentRole === 'PHO_BAN' || currentRole === 'CO_ADMIN') {
+                roleBadge.className = 'role-badge role-pho-ban';
+                roleBadge.innerHTML = `🛡️ Phó Ban: <b>${displayName}</b>`;
+
+                reqBtn.style.display = 'inline-flex';
+                adminAddBtn.style.display = 'inline-flex';
+                exportBtn.style.display = 'inline-flex';
+                bulkImportBtn.style.display = 'inline-flex';
+                adminsBtn.style.display = 'none';
+            } else if (currentRole === 'MODERATOR') {
+                roleBadge.className = 'role-badge role-moderator';
+                roleBadge.innerHTML = `📋 Người Duyệt: <b>${displayName}</b>`;
+
+                reqBtn.style.display = 'inline-flex';
+                adminAddBtn.style.display = 'inline-flex';
+                exportBtn.style.display = 'none';
+                bulkImportBtn.style.display = 'inline-flex';
+                adminsBtn.style.display = 'none';
+            } else if (currentRole === 'COLLABORATOR') {
+                roleBadge.className = 'role-badge role-collaborator';
+                roleBadge.innerHTML = `📝 Ban Thu Thập: <b>${displayName}</b>`;
+
+                reqBtn.style.display = 'none';
+                adminAddBtn.style.display = 'inline-flex';
+                bulkImportBtn.style.display = 'inline-flex';
+                exportBtn.style.display = 'none';
+                adminsBtn.style.display = 'none';
+            }
+
+            updateRequestsBadge();
+        }
+
+        function updateRequestsBadge() {
+            const badge = document.getElementById('request-count');
+            if (badge) badge.innerText = pendingRequests.length;
+        }
+
+        // Chuyển đổi giữa 3 chế độ xem
+        function switchView(viewName) {
+            activeView = viewName;
+            document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-tab-btn').forEach(el => el.classList.remove('active'));
+
+            document.getElementById(`view-${viewName}`).classList.add('active');
+            document.getElementById(`tab-${viewName}`).classList.add('active');
+
+            if (viewName === 'tree') {
+                if (!familyTreeInstance) initFamilyTree();
+            } else if (viewName === 'list') {
+                renderListView();
+            } else if (viewName === 'memorial') {
+                renderMemorialView();
+            }
+        }
+
+        function refreshCurrentView() {
+            if (activeView === 'tree') initFamilyTree();
+            if (activeView === 'list') renderListView();
+            if (activeView === 'memorial') renderMemorialView();
+        }
+
+        // ==================== CÂY PHẢ HỆ (FAMILYTREEJS) ====================
+        function initFamilyTree() {
+            if (!document.getElementById("tree")) return;
+
+            const chartData = familyMembers.map(m => ({
+                id: String(m.id),
+                mid: m.mid ? String(m.mid) : undefined,
+                fid: m.fid ? String(m.fid) : undefined,
+                name: m.name,
+                gender: m.gender || 'male',
+                title: `Thế hệ ${m.gen}`,
+                img: m.img || DEFAULT_AVATAR
+            }));
+
+            document.getElementById("tree").innerHTML = '';
+
+            familyTreeInstance = new FamilyTree(document.getElementById("tree"), {
+                nodes: chartData,
+                nodeBinding: {
+                    field_0: "name",
+                    field_1: "title",
+                    img_0: "img"
+                },
+                enableSearch: false,
+                template: "john",
+                mode: "light",
+                scaleInitial: FamilyTree.match.boundary,
+                nodeMenu: false,
+                siblingSeparation: 120,
+                levelSeparation: 100,
+                subtreeSeparation: 140,
+                nodeTreeMenu: false
+            });
+
+            familyTreeInstance.on('click', function(sender, args) {
+                openViewModal(args.node.id);
+                return false;
+            });
+        }
+
+        function searchMember() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            if (familyTreeInstance) {
+                familyTreeInstance.search(q);
+            }
+        }
+
+        function filterGeneration() {
+            const gen = document.getElementById('genFilter').value;
+            if (gen === 'ALL') {
+                initFamilyTree();
+            } else {
+                const targetGen = parseInt(gen);
+                const filtered = familyMembers.filter(m => m.gen === targetGen);
+                const chartData = filtered.map(m => ({
+                    id: String(m.id),
+                    name: m.name,
+                    gender: m.gender || 'male',
+                    title: `Thế hệ ${m.gen}`,
+                    img: m.img || DEFAULT_AVATAR
+                }));
+                familyTreeInstance = new FamilyTree(document.getElementById("tree"), {
+                    nodes: chartData,
+                    nodeBinding: { field_0: "name", field_1: "title", img_0: "img" },
+                    template: "john",
+                    mode: "light"
+                });
+                familyTreeInstance.on('click', function(sender, args) {
+                    openViewModal(args.node.id);
+                    return false;
+                });
+            }
+        }
+
+        function resetTreeZoom() {
+            if (familyTreeInstance) {
+                familyTreeInstance.fit();
+            }
+        }
+
+        // ==================== DANH BẠ GIA TỘC (LIST VIEW) ====================
+        function renderListView() {
+            const container = document.getElementById('list-container');
+            const q = (document.getElementById('listSearchInput')?.value || '').toLowerCase().trim();
+            const genFilter = document.getElementById('listGenFilter')?.value || 'ALL';
+
+            let filtered = familyMembers;
+            if (q) {
+                filtered = filtered.filter(m => 
+                    (m.name && m.name.toLowerCase().includes(q)) ||
+                    (m.spouse && m.spouse.toLowerCase().includes(q)) ||
+                    (m.notes && m.notes.toLowerCase().includes(q))
+                );
+            }
+            if (genFilter !== 'ALL') {
+                filtered = filtered.filter(m => m.gen === parseInt(genFilter));
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<p style="text-align:center; color:#64748b; padding:30px;">Không tìm thấy thành viên nào phù hợp.</p>`;
+                return;
+            }
+
+            // Nhóm theo thế hệ
+            const genGroups = {};
+            filtered.forEach(m => {
+                const g = m.gen || 1;
+                if (!genGroups[g]) genGroups[g] = [];
+                genGroups[g].push(m);
+            });
+
+            const sortedGens = Object.keys(genGroups).map(Number).sort((a,b) => a - b);
+
+            container.innerHTML = sortedGens.map(g => `
+                <div class="gen-section">
+                    <div class="gen-header">
+                        <span>🚩 Thế Hệ Thứ ${g}</span>
+                        <span style="font-size:0.8rem; font-family:sans-serif; opacity:0.9;">${genGroups[g].length} thành viên</span>
+                    </div>
+                    <div class="member-cards-grid">
+                        ${genGroups[g].map(m => `
+                            <div class="member-card" onclick="openViewModal('${m.id}')">
+                                <img src="${m.img || DEFAULT_AVATAR}" class="card-avatar" alt="Avatar">
+                                <div class="card-body">
+                                    <div class="card-name">
+                                        <span>${m.gender === 'female' ? '👩' : '👨'} ${m.name}</span>
+                                    </div>
+                                    <div class="card-subtext">
+                                        ${m.spouse ? `<div>💑 Vợ/Chồng: <b>${m.spouse}</b></div>` : ''}
+                                        ${m.dod ? `<div style="color:#b91c1c;">🕯️ Ngày mất: <b>${m.dod}</b></div>` : (m.dob ? `<div>🎂 Sinh: ${m.dob}</div>` : '')}
+                                        ${m.burial ? `<div>📍 An táng: ${m.burial}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // ==================== LỊCH NGÀY GIỖ (12 THÁNG & ÂM LỊCH) ====================
+        const MONTH_NAMES = [
+            "", "Tháng 1 (Giêng)", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
+            "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12 (Chạp)"
+        ];
+
+        function switchMemorialMode(mode) {
+            currentMemorialMode = mode;
+            document.querySelectorAll('.mem-mode-btn').forEach(b => b.classList.remove('active'));
+            const activeBtn = document.getElementById(`btn-mode-${mode}`);
+            if (activeBtn) activeBtn.classList.add('active');
+            renderMemorialView();
+        }
+
+        function selectMemorialMonth(m) {
+            selectedMemorialMonth = m;
+            switchMemorialMode('single');
+        }
+
+        function handleMemorialSearch() {
+            memorialSearchQuery = (document.getElementById('memorialSearchInput')?.value || '').toLowerCase().trim();
+            renderMemorialView();
+        }
+
+        function renderMemorialView() {
+            const container = document.getElementById('memorial-container');
+            if (!container) return;
+
+            // Thu thập các thành viên đã mất và phân tích ngày giỗ
+            let deceasedList = familyMembers
+                .filter(m => m.dod && m.dod.toLowerCase() !== 'còn sống')
+                .map(m => ({
+                    ...m,
+                    parsedDod: parseDeathDate(m.dod)
+                }));
+
+            // Đếm số lượng theo từng tháng
+            const monthCounts = Array(13).fill(0);
+            deceasedList.forEach(m => {
+                if (m.parsedDod && m.parsedDod.month >= 1 && m.parsedDod.month <= 12) {
+                    monthCounts[m.parsedDod.month]++;
+                } else {
+                    monthCounts[0]++; // Chưa rõ ngày tháng
+                }
+            });
+
+            // 1. Render Banner hôm nay (Âm lịch & Dương lịch)
+            renderMemorialTodayBanner(deceasedList, monthCounts);
+
+            // 2. Render 12 nút chọn nhanh tháng
+            renderMonthPillsBar(monthCounts);
+
+            // Lọc theo từ khóa tìm kiếm nếu có
+            if (memorialSearchQuery) {
+                deceasedList = deceasedList.filter(m => 
+                    (m.name && m.name.toLowerCase().includes(memorialSearchQuery)) ||
+                    (m.dod && m.dod.toLowerCase().includes(memorialSearchQuery)) ||
+                    (m.burial && m.burial.toLowerCase().includes(memorialSearchQuery)) ||
+                    (m.spouse && m.spouse.toLowerCase().includes(memorialSearchQuery))
+                );
+            }
+
+            // 3. Render giao diện theo chế độ chọn
+            if (currentMemorialMode === 'grid12') {
+                renderMemorial12MonthsGrid(container, deceasedList, monthCounts);
+            } else if (currentMemorialMode === 'single') {
+                renderMemorialSingleMonth(container, deceasedList, selectedMemorialMonth);
+            } else {
+                renderMemorialFullList(container, deceasedList);
+            }
+        }
+
+        // 1. Render Banner Ngày Hôm Nay (Âm - Dương lịch)
+        function renderMemorialTodayBanner(allDeceased, monthCounts) {
+            const bannerInfo = document.getElementById('memorial-today-info');
+            const statBadge = document.getElementById('memorial-stat-badge');
+            if (!bannerInfo || !statBadge) return;
+
+            const daysOfWeek = ["Chủ Nhật", "Thứ Hai", "Thứ Ba", "Thứ Tư", "Thứ Năm", "Thứ Sáu", "Thứ Bảy"];
+            const now = new Date();
+            const dayOfWeekStr = daysOfWeek[now.getDay()];
+            const solarStr = `${String(now.getDate()).padStart(2,'0')}/${String(now.getMonth()+1).padStart(2,'0')}/${now.getFullYear()}`;
+            
+            // Âm lịch
+            const curLunar = convertSolar2Lunar(now.getDate(), now.getMonth()+1, now.getFullYear());
+            todayLunar = curLunar;
+            const lunarMonth = curLunar.month;
+            const countThisMonth = monthCounts[lunarMonth] || 0;
+
+            // Kiểm tra xem hôm nay có cụ nào giỗ không
+            const todayGiỗList = allDeceased.filter(m => {
+                const p = m.parsedDod;
+                if (!p) return false;
+                if (p.isLunar) {
+                    return (p.month === curLunar.month && p.day === curLunar.day);
+                } else {
+                    return (p.month === (now.getMonth()+1) && p.day === now.getDate());
+                }
+            });
+
+            let alertHtml = '';
+            if (todayGiỗList.length > 0) {
+                alertHtml = `<div style="margin-top:4px; color:#b91c1c; font-weight:bold; font-size:0.95rem;">
+                    🔥 HÔM NAY GIỖ CỤ: ${todayGiỗList.map(c => `<b>${c.name}</b>`).join(', ')}!
+                </div>`;
+            }
+
+            bannerInfo.innerHTML = `
+                <div>
+                    🏮 <b>Hôm nay:</b> ${dayOfWeekStr}, ${solarStr} (Dương lịch) 
+                    ➔ Nhằm <b>Ngày ${curLunar.day} Tháng ${curLunar.month} Năm ${curLunar.year} (Âm Lịch)</b>.
+                </div>
+                <div style="font-size: 0.82rem; margin-top: 2px; color: #92400e;">
+                    ⭐ Đang trong <b>Tháng ${lunarMonth} Âm Lịch</b> • Gia tộc có <b>${countThisMonth}</b> ngày giỗ trong tháng này.
+                </div>
+                ${alertHtml}
+            `;
+
+            statBadge.innerHTML = `🕯️ Tháng ${lunarMonth} (AL): ${countThisMonth} Ngày Giỗ`;
+        }
+
+        // 2. Render Thanh 12 Nút Chọn Nhanh Tháng
+        function renderMonthPillsBar(monthCounts) {
+            const bar = document.getElementById('month-pills-bar');
+            if (!bar) return;
+
+            const curLunarMonth = todayLunar ? todayLunar.month : 1;
+
+            let pillsHtml = '';
+            for (let m = 1; m <= 12; m++) {
+                const isCurrent = (m === curLunarMonth);
+                const isSelected = (currentMemorialMode === 'single' && selectedMemorialMonth === m);
+                const count = monthCounts[m] || 0;
+
+                pillsHtml += `
+                    <button class="month-pill-btn ${isCurrent ? 'is-current-month' : ''} ${isSelected ? 'active' : ''}" 
+                            onclick="selectMemorialMonth(${m})" 
+                            title="${isCurrent ? 'Tháng Âm lịch hiện tại' : ''}">
+                        ${isCurrent ? '⭐ ' : ''}Tháng ${m}
+                        <span class="pill-count-badge">${count}</span>
+                    </button>
+                `;
+            }
+
+            if (monthCounts[0] > 0) {
+                pillsHtml += `
+                    <button class="month-pill-btn ${selectedMemorialMonth === 0 ? 'active' : ''}" onclick="selectMemorialMonth(0)">
+                        ❓ Chưa rõ ngày <span class="pill-count-badge">${monthCounts[0]}</span>
+                    </button>
+                `;
+            }
+
+            bar.innerHTML = pillsHtml;
+        }
+
+        // 3. CHẾ ĐỘ 1: LƯỚI 12 THÁNG TOÀN CẢNH (GRID VIEW)
+        function renderMemorial12MonthsGrid(container, deceasedList, monthCounts) {
+            const curLunarMonth = todayLunar ? todayLunar.month : 1;
+            const curLunarDay = todayLunar ? todayLunar.day : 1;
+
+            // Nhóm người mất theo tháng 1-12
+            const monthGroups = {};
+            for (let i = 0; i <= 12; i++) monthGroups[i] = [];
+
+            deceasedList.forEach(m => {
+                const mo = (m.parsedDod && m.parsedDod.month >= 1 && m.parsedDod.month <= 12) ? m.parsedDod.month : 0;
+                monthGroups[mo].push(m);
+            });
+
+            // Sắp xếp các cụ trong mỗi tháng theo ngày tăng dần
+            for (let i = 1; i <= 12; i++) {
+                monthGroups[i].sort((a,b) => {
+                    const da = a.parsedDod?.day || 99;
+                    const db = b.parsedDod?.day || 99;
+                    return da - db;
+                });
+            }
+
+            let cardsHtml = '';
+            for (let m = 1; m <= 12; m++) {
+                const isCurrent = (m === curLunarMonth);
+                const list = monthGroups[m];
+                const count = list.length;
+
+                cardsHtml += `
+                    <div class="month-card ${isCurrent ? 'current-month' : ''}" id="month-card-${m}">
+                        ${isCurrent ? `<div class="current-month-badge">⭐ THÁNG HIỆN TẠI (ÂL)</div>` : ''}
+                        <div class="month-card-header">
+                            <div class="month-title">
+                                <span>${isCurrent ? '🏮' : '📅'}</span>
+                                <span>${MONTH_NAMES[m]}</span>
+                            </div>
+                            <div class="month-count">${count} ngày giỗ</div>
+                        </div>
+                        <div class="month-card-body">
+                            ${count === 0 ? `
+                                <div class="month-empty">Tháng này không có ngày giỗ</div>
+                            ` : list.map(c => {
+                                const p = c.parsedDod;
+                                const isToday = p && p.isLunar && (p.month === curLunarMonth && p.day === curLunarDay);
+                                const isUpcoming = p && p.isLunar && (p.month === curLunarMonth && p.day > curLunarDay && (p.day - curLunarDay <= 7));
+                                const daysLeft = isUpcoming ? (p.day - curLunarDay) : 0;
+
+                                return `
+                                    <div class="gio-item ${isToday ? 'gio-item-today' : ''}" onclick="openViewModal('${c.id}')" title="Nhấp để xem chi tiết thông tin cụ">
+                                        <div class="gio-header">
+                                            <div class="gio-name">
+                                                ${c.gender === 'female' ? '👵' : '👴'} ${c.name}
+                                                <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Đời ${c.gen})</span>
+                                            </div>
+                                            <div class="gio-date-badge">
+                                                ${isToday ? '🔥 HÔM NAY: ' : '🕯️ '}${c.dod}
+                                            </div>
+                                        </div>
+                                        <div class="gio-sub">
+                                            ${isUpcoming ? `<span style="color:#ea580c; font-weight:bold;">⏳ Sắp đến giỗ (còn ${daysLeft} ngày) • </span>` : ''}
+                                            <span>📍 Mộ phần: <b>${c.burial || 'Chưa cập nhật'}</b></span>
+                                            ${c.spouse ? `<span>• 💑 ${c.spouse}</span>` : ''}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // Phần dành cho các cụ chưa rõ ngày tháng
+            if (monthGroups[0].length > 0) {
+                cardsHtml += `
+                    <div class="month-card" style="border-left: 3px solid #64748b;">
+                        <div class="month-card-header" style="background:#f1f5f9;">
+                            <div class="month-title" style="color:#475569;">
+                                <span>❓</span>
+                                <span>Chưa Rõ Ngày Tháng Giỗ</span>
+                            </div>
+                            <div class="month-count">${monthGroups[0].length} cụ</div>
+                        </div>
+                        <div class="month-card-body">
+                            ${monthGroups[0].map(c => `
+                                <div class="gio-item" onclick="openViewModal('${c.id}')">
+                                    <div class="gio-header">
+                                        <div class="gio-name">${c.gender === 'female' ? '👵' : '👴'} ${c.name} (Đời ${c.gen})</div>
+                                        <div class="gio-date-badge" style="background:#e2e8f0; color:#475569; border-color:#cbd5e1;">${c.dod || 'Chưa rõ'}</div>
+                                    </div>
+                                    <div class="gio-sub">
+                                        <span>📍 ${c.burial || 'Chưa rõ nơi an táng'}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = `
+                <div class="memorial-grid-12">
+                    ${cardsHtml}
+                </div>
+            `;
+        }
+
+        // 4. CHẾ ĐỘ 2: XEM TỪNG THÁNG CHI TIẾT
+        function renderMemorialSingleMonth(container, deceasedList, monthNum) {
+            const list = deceasedList.filter(m => {
+                if (monthNum === 0) {
+                    return !m.parsedDod || m.parsedDod.month === 0;
+                }
+                return m.parsedDod && m.parsedDod.month === monthNum;
+            });
+
+            // Sắp xếp theo ngày
+            list.sort((a,b) => (a.parsedDod?.day || 99) - (b.parsedDod?.day || 99));
+
+            const isCurrent = (monthNum === (todayLunar ? todayLunar.month : -1));
+
+            container.innerHTML = `
+                <div class="single-month-header">
+                    <div>
+                        <h3>🌸 LỊCH GIỖ ${monthNum === 0 ? 'CHƯA RÕ THÁNG' : MONTH_NAMES[monthNum].toUpperCase()} (ÂM LỊCH)</h3>
+                        <p style="font-size: 0.82rem; opacity: 0.9; margin-top: 2px;">
+                            ${isCurrent ? '⭐ Đây là tháng Âm lịch hiện tại • ' : ''}Tổng cộng <b>${list.length}</b> ngày giỗ
+                        </p>
+                    </div>
+                    <button class="btn btn-secondary" onclick="switchMemorialMode('grid12')" style="font-size: 0.8rem; padding: 6px 12px;">
+                        🗓️ Về Lưới 12 Tháng
+                    </button>
+                </div>
+
+                ${list.length === 0 ? `
+                    <div style="text-align: center; color: #64748b; padding: 40px; background: white; border-radius: 10px; border: 1px dashed #cbd5e1;">
+                        <p style="font-size: 1.1rem; margin-bottom: 6px;">🍃 Trong tháng này gia tộc không có ngày giỗ nào.</p>
+                        <button class="btn" onclick="selectMemorialMonth(${todayLunar ? todayLunar.month : 1})" style="margin-top: 10px;">
+                            Xem Tháng Hiện Tại (Tháng ${todayLunar ? todayLunar.month : 1})
+                        </button>
+                    </div>
+                ` : `
+                    <div class="member-cards-grid">
+                        ${list.map(m => `
+                            <div class="member-card" onclick="openViewModal('${m.id}')" style="border-left: 5px solid #b45309;">
+                                <img src="${m.img || DEFAULT_AVATAR}" class="card-avatar" alt="Avatar">
+                                <div class="card-body">
+                                    <div class="card-name">
+                                        <span>${m.gender === 'female' ? '👵' : '👴'} ${m.name}</span>
+                                        <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Thế hệ ${m.gen})</span>
+                                    </div>
+                                    <div class="card-subtext">
+                                        <div style="color:#b91c1c; font-weight:bold; font-size:0.88rem; margin: 3px 0;">
+                                            🕯️ Ngày Giỗ: ${m.dod}
+                                        </div>
+                                        ${m.spouse ? `<div>💑 Vợ/Chồng: <b>${m.spouse}</b></div>` : ''}
+                                        ${m.burial ? `<div>📍 Nơi an táng: <b>${m.burial}</b></div>` : ''}
+                                        ${m.notes ? `<div style="font-style:italic; color:#64748b; margin-top:2px;">${m.notes}</div>` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `}
+            `;
+        }
+
+        // 5. CHẾ ĐỘ 3: DANH SÁCH ĐẦY ĐỦ (FULL LIST THEO TRÌNH TỰ NGÀY GIỖ)
+        function renderMemorialFullList(container, deceasedList) {
+            // Sắp xếp theo thứ tự tháng (1-12), sau đó theo ngày
+            deceasedList.sort((a,b) => {
+                const ma = (a.parsedDod && a.parsedDod.month >= 1) ? a.parsedDod.month : 99;
+                const mb = (b.parsedDod && b.parsedDod.month >= 1) ? b.parsedDod.month : 99;
+                if (ma !== mb) return ma - mb;
+                const da = a.parsedDod?.day || 99;
+                const db = b.parsedDod?.day || 99;
+                return da - db;
+            });
+
+            container.innerHTML = `
+                <div style="margin-bottom: 12px; font-weight: 600; color: #475569; font-size: 0.9rem;">
+                    📜 Danh sách toàn bộ ${deceasedList.length} ngày giỗ trong năm (Sắp xếp từ Tháng Giêng đến Tháng Chạp):
+                </div>
+                ${deceasedList.map(m => `
+                    <div class="memorial-card" onclick="openViewModal('${m.id}')" style="cursor: pointer;">
+                        <div class="memorial-info">
+                            <div style="font-weight:bold; font-size:1rem; color:var(--primary-color);">
+                                ${m.gender === 'female' ? '👵' : '👴'} ${m.name} 
+                                <span style="font-size:0.75rem; color:#64748b; font-weight:normal;">(Thế hệ ${m.gen})</span>
+                            </div>
+                            <div style="font-size:0.85rem; color:#475569;">
+                                ${m.spouse ? `💑 Vợ/Chồng: ${m.spouse} • ` : ''}
+                                📍 Nơi an táng: <b>${m.burial || 'Chưa cập nhật'}</b>
+                            </div>
+                            ${m.notes ? `<div style="font-size:0.78rem; color:#64748b; font-style:italic;">${m.notes}</div>` : ''}
+                        </div>
+                        <div class="memorial-date">
+                            🕯️ Ngày Giỗ: ${m.dod}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // ==================== MODAL XEM CHI TIẾT ====================
+        function openViewModal(memberId) {
+            currentSelectedId = String(memberId);
+            const m = familyMembers.find(x => String(x.id) === currentSelectedId);
+            if (!m) return;
+
+            document.getElementById('view-name').innerText = m.name;
+            document.getElementById('view-img').src = m.img || DEFAULT_AVATAR;
+            document.getElementById('view-gen').innerText = `Thế hệ thứ ${m.gen}`;
+            document.getElementById('view-gender').innerText = m.gender === 'female' ? 'Nữ (Cụ Bà / Cô / Chị)' : 'Nam (Cụ Ông / Bác / Anh)';
+            document.getElementById('view-dob').innerText = m.dob || 'Chưa rõ';
+            document.getElementById('view-dod').innerText = m.dod || 'Còn sống / Chưa cập nhật';
+            document.getElementById('view-spouse').innerText = m.spouse || 'Chưa cập nhật';
+            document.getElementById('view-burial').innerText = m.burial || 'Chưa cập nhật';
+            document.getElementById('view-notes').innerText = m.notes || 'Không có';
+
+            // Tìm con cái trực hệ
+            const children = familyMembers.filter(x => String(x.fid) === currentSelectedId || String(x.mid) === currentSelectedId);
+            if (children.length > 0) {
+                document.getElementById('view-children').innerHTML = children.map(c => `• <b>${c.name}</b> (Thế hệ ${c.gen})`).join('<br>');
+            } else {
+                document.getElementById('view-children').innerText = 'Chưa ghi nhận con cái';
+            }
+
+            const editBtn = document.getElementById('btn-edit-action');
+            editBtn.innerText = canDirectEdit() ? '✏️ Sửa Trực Tiếp' : '📝 Đề xuất sửa';
+
+            const delBtn = document.getElementById('btn-delete-member');
+            delBtn.style.display = canDeleteMember() ? 'inline-block' : 'none';
+
+            openModal('viewModal');
+        }
+
+        // ==================== MODAL SỬA THÔNG TIN ====================
+        function openSuggestEditModal() {
+            closeModal('viewModal');
+            const m = familyMembers.find(x => String(x.id) === currentSelectedId);
+            if (!m) return;
+
+            const isDirect = canDirectEdit();
+            document.getElementById('edit-modal-title').innerText = isDirect ? '✏️ Chỉnh Sửa Thành Viên' : '📝 Đề Xuất Sửa Thông Tin';
+            document.getElementById('edit-sender-box').style.display = isDirect ? 'none' : 'block';
+
+            document.getElementById('edit-id').value = m.id;
+            document.getElementById('edit-name').value = m.name;
+            document.getElementById('edit-gen').value = m.gen;
+            document.getElementById('edit-gender').value = m.gender || 'male';
+            document.getElementById('edit-dob').value = m.dob || '';
+            document.getElementById('edit-dod').value = m.dod || '';
+            document.getElementById('edit-spouse').value = m.spouse || '';
+            document.getElementById('edit-burial').value = m.burial || '';
+            document.getElementById('edit-notes').value = m.notes || '';
+
+            // Ảnh chân dung
+            document.getElementById('edit-img-data').value = m.img || '';
+            if (m.img && m.img !== DEFAULT_AVATAR) {
+                document.getElementById('edit-preview').src = m.img;
+                document.getElementById('edit-preview-wrap').style.display = 'flex';
+            } else {
+                clearUploadedImage('edit-preview', 'edit-img-data', 'edit-preview-wrap');
+            }
+
+            openModal('editModal');
+        }
+
+        function submitEditForm() {
+            const id = document.getElementById('edit-id').value;
+            const updatedData = {
+                id: id,
+                name: document.getElementById('edit-name').value.trim(),
+                img: document.getElementById('edit-img-data').value || DEFAULT_AVATAR,
+                gen: parseInt(document.getElementById('edit-gen').value) || 1,
+                gender: document.getElementById('edit-gender').value,
+                dob: document.getElementById('edit-dob').value.trim(),
+                dod: document.getElementById('edit-dod').value.trim(),
+                spouse: document.getElementById('edit-spouse').value.trim(),
+                burial: document.getElementById('edit-burial').value.trim(),
+                notes: document.getElementById('edit-notes').value.trim()
+            };
+
+            const safeKey = String(id).replace('.', '_');
+
+            if (canDirectEdit()) {
+                // Admin / Moderator lưu trực tiếp
+                db.ref('members/' + safeKey).update(updatedData, (err) => {
+                    if (!err) {
+                        alert('✅ Đã cập nhật thành công lên Firebase!');
+                        closeModal('editModal');
+                    } else {
+                        alert('Lỗi: ' + err.message);
+                    }
+                });
+            } else {
+                // Con cháu gửi đề xuất kèm thông tin người gửi
+                const senderName = document.getElementById('edit-sender-name').value.trim();
+                const senderPhone = document.getElementById('edit-sender-phone').value.trim();
+                const senderRelation = document.getElementById('edit-sender-relation').value.trim();
+
+                if (!senderName || !senderPhone) {
+                    alert('Vui lòng điền Họ tên và Số điện thoại của bạn để Ban Quản Trị tiện liên hệ xác nhận!');
+                    return;
+                }
+
+                const reqId = 'REQ_EDIT_' + Date.now();
+                const reqObj = {
+                    reqId: reqId,
+                    type: 'UPDATE_MEMBER',
+                    targetId: safeKey,
+                    targetName: updatedData.name,
+                    senderName: senderName,
+                    senderPhone: senderPhone,
+                    senderRelation: senderRelation,
+                    data: updatedData,
+                    timestamp: new Date().toLocaleString('vi-VN')
+                };
+
+                db.ref('requests/' + reqId).set(reqObj, (err) => {
+                    if (!err) {
+                        alert('🎉 Đã gửi đề xuất cập nhật thành công!\nBan Quản Trị dòng họ sẽ xem xét và phê duyệt.');
+                        closeModal('editModal');
+                    } else {
+                        alert('Lỗi khi gửi đề xuất: ' + err.message);
+                    }
+                });
+            }
+        }
+
+        // ==================== MODAL THÊM CON CHÁU / BÁO SINH ====================
+        function openAddMemberModal(isAdminDirect = false) {
+            const parentSelect = document.getElementById('add-parent-id');
+            parentSelect.innerHTML = '<option value="">-- Chọn Cha / Mẹ (Trực hệ Họ Nguyễn) --</option>' + 
+                familyMembers.map(m => `<option value="${m.id}">[Thế hệ ${m.gen}] ${m.name}</option>`).join('');
+
+            document.getElementById('add-sender-box').style.display = isAdminDirect ? 'none' : 'block';
+            document.getElementById('add-modal-title').innerText = isAdminDirect ? '➕ Thêm Thành Viên Trực Tiếp (Admin)' : '👶 Báo Sinh / Thêm Con Cháu Mới';
+            document.getElementById('btn-save-new').innerText = isAdminDirect ? '➕ Lưu Vào Gia Phả' : '📨 Gửi Đề Xuất Báo Sinh';
+
+            // Reset form
+            document.getElementById('addForm').reset();
+            clearUploadedImage('add-preview', 'add-img-data', 'add-preview-wrap');
+
+            openModal('addModal');
+        }
+
+        function autoFillGeneration() {
+            const parentId = document.getElementById('add-parent-id').value;
+            const parent = familyMembers.find(x => String(x.id) === String(parentId));
+            if (parent) {
+                document.getElementById('add-gen').value = (parent.gen || 1) + 1;
+            }
+        }
+
+        function submitAddForm() {
+            const parentId = document.getElementById('add-parent-id').value;
+            if (!parentId) {
+                alert('Vui lòng chọn Cha/Mẹ trực hệ!');
+                return;
+            }
+
+            const parent = familyMembers.find(x => String(x.id) === String(parentId));
+            const newName = document.getElementById('add-name').value.trim();
+            if (!newName) {
+                alert('Vui lòng nhập Họ tên con cháu!');
+                return;
+            }
+
+            const gen = parseInt(document.getElementById('add-gen').value) || (parent ? parent.gen + 1 : 1);
+            const newId = "MEM_" + Date.now();
+
+            const newMemberData = {
+                id: newId,
+                fid: parent ? parent.id : null,
+                gen: gen,
+                name: newName,
+                img: document.getElementById('add-img-data').value || DEFAULT_AVATAR,
+                gender: document.getElementById('add-gender').value,
+                dob: document.getElementById('add-dob').value.trim(),
+                dod: '',
+                spouse: document.getElementById('add-spouse').value.trim(),
+                burial: '',
+                notes: document.getElementById('add-notes').value.trim()
+            };
+
+            if (canDirectEdit()) {
+                db.ref('members/' + newId).set(newMemberData, (err) => {
+                    if (!err) {
+                        alert('✅ Đã thêm thành viên mới vào gia phả!');
+                        closeModal('addModal');
+                    } else {
+                        alert('Lỗi: ' + err.message);
+                    }
+                });
+            } else {
+                const senderName = document.getElementById('add-sender-name').value.trim();
+                const senderPhone = document.getElementById('add-sender-phone').value.trim();
+                const senderRelation = document.getElementById('add-sender-relation').value.trim();
+
+                if (!senderName || !senderPhone) {
+                    alert('Vui lòng điền Họ tên và Số điện thoại của bạn để Ban Quản Trị tiện liên hệ xác nhận!');
+                    return;
+                }
+
+                const reqId = 'REQ_NEW_' + Date.now();
+                const reqObj = {
+                    reqId: reqId,
+                    type: 'ADD_MEMBER',
+                    parentName: parent ? parent.name : '',
+                    targetName: newName,
+                    senderName: senderName,
+                    senderPhone: senderPhone,
+                    senderRelation: senderRelation,
+                    data: newMemberData,
+                    timestamp: new Date().toLocaleString('vi-VN')
+                };
+
+                db.ref('requests/' + reqId).set(reqObj, (err) => {
+                    if (!err) {
+                        alert('🎉 Đã gửi đề xuất báo sinh con cháu mới thành công!\nBan Quản Trị dòng họ sẽ xem xét và phê duyệt.');
+                        closeModal('addModal');
+                    } else {
+                        alert('Lỗi khi gửi đề xuất: ' + err.message);
+                    }
+                });
+            }
+        }
+
+        // ==================== NÉN & XỬ LÝ ẢNH TRỰC TIẾP ====================
+        function handleImageUpload(event, previewId, dataHolderId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    // Nén ảnh qua Canvas (tối đa 320x320, chất lượng 0.75 để file siêu nhẹ ~20-30KB)
+                    const maxDim = 320;
+                    let w = img.width;
+                    let h = img.height;
+                    if (w > h) {
+                        if (w > maxDim) {
+                            h = Math.round((h * maxDim) / w);
+                            w = maxDim;
+                        }
+                    } else {
+                        if (h > maxDim) {
+                            w = Math.round((w * maxDim) / h);
+                            h = maxDim;
+                        }
+                    }
+
+                    const canvas = document.createElement('canvas');
+                    canvas.width = w;
+                    canvas.height = h;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, w, h);
+
+                    const compressedBase64 = canvas.toDataURL('image/jpeg', 0.75);
+
+                    // Hiển thị xem trước
+                    document.getElementById(previewId).src = compressedBase64;
+                    document.getElementById(dataHolderId).value = compressedBase64;
+                    document.getElementById(previewId + '-wrap').style.display = 'flex';
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function clearUploadedImage(previewId, dataHolderId, wrapId) {
+            document.getElementById(previewId).src = '';
+            document.getElementById(dataHolderId).value = '';
+            document.getElementById(wrapId).style.display = 'none';
+        }
+
+        // ==================== PHÊ DUYỆT ĐỀ XUẤT (ADMIN) ====================
+        function openRequestsModal() {
+            renderRequestsList();
+            openModal('requestsModal');
+        }
+
+        function renderRequestsList() {
+            const container = document.getElementById('requests-container');
+            if (pendingRequests.length === 0) {
+                container.innerHTML = `<p style="text-align: center; color: #64748b; padding: 25px;">Hiện không có đề xuất nào đang chờ duyệt.</p>`;
+                return;
+            }
+
+            container.innerHTML = pendingRequests.map(r => {
+                const isNew = r.type === 'ADD_MEMBER';
+                return `
+                    <div class="request-card">
+                        <div class="request-header">
+                            <span>${isNew ? '👶 Đề xuất BÁO SINH con cháu mới' : '✏️ Đề xuất SỬA THÔNG TIN'}</span>
+                            <span style="font-size: 0.75rem; color: #64748b; font-weight: normal;">${r.timestamp}</span>
+                        </div>
+
+                        <div class="request-sender-info">
+                            <span>👤 Người gửi: <b>${r.senderName || 'Chưa ghi'}</b></span>
+                            <span>📞 SĐT: <a href="tel:${r.senderPhone}" style="color:#1d4ed8; font-weight:bold;">${r.senderPhone || 'Chưa ghi'}</a></span>
+                            <span>🤝 Quan hệ: <b>${r.senderRelation || 'Chưa ghi'}</b></span>
+                        </div>
+
+                        <div class="diff-box">
+                            ${isNew ? `
+                                <div>• Con cháu mới: <b>${r.targetName}</b> (Thế hệ ${r.data.gen})</div>
+                                <div>• Cha/Mẹ trực hệ: <b>${r.parentName}</b></div>
+                            ` : `
+                                <div>• Thành viên cần sửa: <b>${r.targetName}</b></div>
+                            `}
+                            <div>• Giới tính: ${r.data.gender === 'female' ? 'Nữ' : 'Nam'}</div>
+                            <div>• Ngày sinh: ${r.data.dob || 'Chưa rõ'}</div>
+                            <div>• Ngày mất: ${r.data.dod || 'Còn sống'}</div>
+                            <div>• Vợ/Chồng: ${r.data.spouse || 'Chưa rõ'}</div>
+                            <div>• Nơi an táng: ${r.data.burial || 'Chưa rõ'}</div>
+                            <div>• Ghi chú: ${r.data.notes || 'Không có'}</div>
+                            ${r.data.img && r.data.img !== DEFAULT_AVATAR ? `
+                                <div style="margin-top:6px; display:flex; align-items:center; gap:8px;">
+                                    <span>• Ảnh chân dung đính kèm:</span>
+                                    <img src="${r.data.img}" style="width:45px; height:45px; border-radius:50%; object-fit:cover; border:1px solid #ca8a04;">
+                                </div>
+                            ` : ''}
+                        </div>
+
+                        <div style="display:flex; justify-content:flex-end; gap:8px;">
+                            <button class="btn btn-danger" onclick="rejectRequest('${r.reqId}')">❌ Từ Chối</button>
+                            <button class="btn btn-success" onclick="approveRequest('${r.reqId}')">✅ Chấp Thuận</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function approveRequest(reqId) {
+            const req = pendingRequests.find(r => r.reqId === reqId);
+            if (!req) return;
+
+            if (req.type === 'ADD_MEMBER') {
+                // Thêm thành viên mới
+                db.ref('members/' + req.data.id).set(req.data, (err) => {
+                    if (!err) {
+                        db.ref('requests/' + reqId).remove();
+                        alert('✅ Đã duyệt và thêm thành viên mới vào gia phả!');
+                    }
+                });
+            } else {
+                // Cập nhật thành viên cũ
+                db.ref('members/' + req.targetId).update(req.data, (err) => {
+                    if (!err) {
+                        db.ref('requests/' + reqId).remove();
+                        alert('✅ Đã duyệt và cập nhật thành công lên Gia phả!');
+                    }
+                });
+            }
+        }
+
+        function rejectRequest(reqId) {
+            if (!confirm('Bạn có chắc chắn muốn từ chối đề xuất này không?')) return;
+            db.ref('requests/' + reqId).remove((err) => {
+                if (!err) alert('Đã từ chối đề xuất.');
+            });
+        }
+
+        function deleteCurrentMember() {
+            if (!canDeleteMember()) {
+                alert('Chỉ Quản Lý Hệ Thống hoặc Trưởng Ban mới có quyền xóa thành viên khỏi phả hệ!');
+                return;
+            }
+            if (!confirm('XÁC NHẬN: Bạn có chắc chắn muốn xóa thành viên này khỏi cây gia phả?')) return;
+            const safeKey = String(currentSelectedId).replace('.', '_');
+            db.ref('members/' + safeKey).remove((err) => {
+                if (!err) {
+                    closeModal('viewModal');
+                    alert('Đã xóa thành viên khỏi hệ thống.');
+                }
+            });
+        }
+
+        // ==================== XÁC THỰC ADMIN ====================
+        function handleAuthClick() {
+            if (currentUser) {
+                if (confirm('Bạn muốn đăng xuất khỏi quyền Quản Trị Viên / Ban Thu Thập?')) {
+                    auth.signOut().then(() => {
+                        alert('Đã đăng xuất.');
+                    });
+                }
+            } else {
+                document.getElementById('auth-error').style.display = 'none';
+                const savedEmail = localStorage.getItem('giapha_admin_email');
+                const authEmailInput = document.getElementById('auth-email');
+                if (savedEmail && authEmailInput) {
+                    authEmailInput.value = savedEmail;
+                }
+                openModal('authModal');
+            }
+        }
+
+        function executeLogin() {
+            const email = document.getElementById('auth-email').value.trim();
+            const password = document.getElementById('auth-password').value;
+            const errBox = document.getElementById('auth-error');
+
+            errBox.style.display = 'none';
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    localStorage.setItem('giapha_admin_email', email);
+                    closeModal('authModal');
+                    alert('🎉 Đăng nhập thành công! Chào mừng bạn tham gia quản trị phả hệ họ Nguyễn.');
+                })
+                .catch((error) => {
+                    errBox.style.display = 'block';
+                    errBox.innerText = 'Lỗi đăng nhập: Sai mật khẩu hoặc tài khoản chưa được tạo trong Firebase Auth.';
+                });
+        }
+
+        // ==================== QUẢN LÝ PHÂN QUYỀN BAN QUẢN TRỊ & BAN THU THẬP ====================
+        function openAdminsModal() {
+            renderAdminsList();
+            openModal('adminsModal');
+        }
+
+        function renderAdminsList() {
+            const container = document.getElementById('admins-list-container');
+            if (!container) return;
+
+            const admins = Object.entries(adminList);
+            if (admins.length === 0) {
+                container.innerHTML = `<p style="color:#64748b; font-size:0.85rem;">Chưa có thành viên nào.</p>`;
+                return;
+            }
+
+            // Thứ tự ưu tiên: Quản Lý Hệ Thống -> Trưởng Ban -> Phó Ban -> Người Duyệt -> Ban Thu Thập
+            const roleOrder = { 'SUPER_ADMIN': 1, 'ROOT_ADMIN': 2, 'TRUONG_BAN': 2, 'PHO_BAN': 3, 'CO_ADMIN': 3, 'MODERATOR': 4, 'COLLABORATOR': 5 };
+            admins.sort((a, b) => (roleOrder[a[1].role] || 99) - (roleOrder[b[1].role] || 99));
+
+            container.innerHTML = admins.map(([key, a]) => {
+                const isSuper = (a.role === 'SUPER_ADMIN' || a.name === 'Nguyễn Toàn Thắng' || a.phone === '094 999 1515');
+                const isTruongBan = (a.role === 'TRUONG_BAN' || a.role === 'ROOT_ADMIN');
+                const isPhoBan = (a.role === 'PHO_BAN' || a.role === 'CO_ADMIN');
+                const isCollaborator = (a.role === 'COLLABORATOR');
+
+                let badgeClass = 'role-moderator';
+                let roleTitle = 'Người Duyệt';
+                let roleIcon = '📋';
+
+                if (isSuper) {
+                    badgeClass = 'role-super-admin';
+                    roleTitle = 'Quản Lý Hệ Thống';
+                    roleIcon = '⚙️';
+                } else if (isTruongBan) {
+                    badgeClass = 'role-truong-ban';
+                    roleTitle = 'Trưởng Ban Quản Trị';
+                    roleIcon = '👑';
+                } else if (isPhoBan) {
+                    badgeClass = 'role-pho-ban';
+                    roleTitle = 'Phó Ban Quản Trị';
+                    roleIcon = '🛡️';
+                } else if (isCollaborator) {
+                    badgeClass = 'role-collaborator';
+                    roleTitle = 'Ban Thu Thập';
+                    roleIcon = '📝';
+                }
+
+                // Ai có quyền thu hồi?
+                // Quản Lý Hệ Thống có quyền thu hồi tất cả mọi người (trừ chính mình).
+                // Trưởng Ban có quyền thu hồi Phó Ban, Người Duyệt, Ban Thu Thập.
+                const canRevokeThis = !isSuper && (
+                    currentRole === 'SUPER_ADMIN' || 
+                    (currentRole === 'TRUONG_BAN' && !isTruongBan)
+                );
+
+                return `
+                    <div class="admin-user-card" style="${isSuper ? 'border-left: 4px solid #b45309; background: #fffdfa;' : ''}">
+                        <div class="admin-user-info">
+                            <div style="font-weight: bold; font-size: 0.92rem; color: #1e293b; display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                                <span>${roleIcon} ${a.name || a.email}</span>
+                                <span class="role-badge ${badgeClass}" style="font-size: 0.68rem; padding: 2px 8px;">
+                                    ${roleTitle}
+                                </span>
+                            </div>
+                            <div style="font-size: 0.8rem; color: #475569; margin-top: 3px;">
+                                ✉️ Email: <b>${a.email || 'Chưa cập nhật'}</b> ${a.phone ? `• 📞 SĐT: <b>${a.phone}</b>` : ''}
+                            </div>
+                            <div style="font-size: 0.72rem; color: #94a3b8; margin-top: 2px;">
+                                Ngày cấp: ${a.addedAt || 'Trước đó'} ${a.addedBy ? `(bởi ${a.addedBy})` : ''}
+                            </div>
+                        </div>
+                        <div>
+                            ${canRevokeThis ? `
+                                <button class="btn btn-danger" style="font-size: 0.75rem; padding: 4px 8px;" onclick="revokeAdmin('${key}', '${a.name || a.email}')">
+                                    🗑️ Thu hồi
+                                </button>
+                            ` : (isSuper ? `<span style="font-size: 0.75rem; color: #92400e; font-weight: bold;">🔒 Vĩnh viễn</span>` : '')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function submitNewAdmin() {
+            const name = document.getElementById('new-admin-name').value.trim();
+            const email = document.getElementById('new-admin-email').value.trim().toLowerCase();
+            const phone = document.getElementById('new-admin-phone').value.trim();
+            const password = document.getElementById('new-admin-password').value;
+            const role = document.getElementById('new-admin-role').value;
+
+            if (!name || !email || !password) {
+                alert('Vui lòng điền đầy đủ Họ tên, Email và Mật khẩu!');
+                return;
+            }
+
+            if (password.length < 6) {
+                alert('Mật khẩu phải có tối thiểu 6 ký tự!');
+                return;
+            }
+
+            const safeKey = email.replace(/\./g, '_');
+
+            // Tạo tài khoản qua Secondary App Instance của Firebase để không làm đăng xuất Quản trị viên
+            try {
+                const tempAppName = 'CreatorApp_' + Date.now();
+                const tempApp = firebase.initializeApp(firebaseConfig, tempAppName);
+                const tempAuth = tempApp.auth();
+
+                tempAuth.createUserWithEmailAndPassword(email, password)
+                    .then(() => {
+                        tempAuth.signOut();
+                        tempApp.delete();
+                        saveAdminToDatabase(safeKey, name, email, phone, role);
+                    })
+                    .catch((err) => {
+                        tempApp.delete();
+                        if (err.code === 'auth/email-already-in-use') {
+                            saveAdminToDatabase(safeKey, name, email, phone, role);
+                        } else {
+                            console.warn("Client user creation note:", err);
+                            saveAdminToDatabase(safeKey, name, email, phone, role, true);
+                        }
+                    });
+            } catch (e) {
+                saveAdminToDatabase(safeKey, name, email, phone, role, true);
+            }
+        }
+
+        function saveAdminToDatabase(safeKey, name, email, phone, role, needConsoleNotice = false) {
+            let roleTitle = 'Người Duyệt Thông Tin';
+            if (role === 'TRUONG_BAN') roleTitle = 'Trưởng Ban Quản Trị';
+            else if (role === 'PHO_BAN') roleTitle = 'Phó Ban Quản Trị';
+            else if (role === 'COLLABORATOR') roleTitle = 'Ban Thu Thập Thông Tin';
+
+            const adminObj = {
+                name: name,
+                email: email,
+                phone: phone,
+                role: role,
+                title: roleTitle,
+                addedAt: new Date().toLocaleString('vi-VN'),
+                addedBy: currentUser ? (currentUser.email || 'Nguyễn Toàn Thắng') : 'Nguyễn Toàn Thắng'
+            };
+
+            db.ref('admins/' + safeKey).set(adminObj, (err) => {
+                if (!err) {
+                    document.getElementById('addAdminForm').reset();
+                    let msg = `🎉 ĐÃ PHÂN QUYỀN THÀNH CÔNG CHO:\n👉 ${name} (${email})\n👉 Chức danh: ${roleTitle}\n\n`;
+                    msg += `📱 Hãy gửi thông tin cho người này:\n`;
+                    msg += `- Đường link trang web gia phả\n`;
+                    msg += `- Email đăng nhập: ${email}\n`;
+                    msg += `- Mật khẩu bạn vừa đặt\n\n`;
+                    msg += `Người này chỉ cần bấm nút [Admin] trên web để đăng nhập và thực hiện nhiệm vụ họ tộc.`;
+                    if (needConsoleNotice) {
+                        msg += `\n\n(Lưu ý: Nếu người đó chưa đăng nhập được do chính sách bảo mật Firebase, Quản lý hệ thống chỉ cần vào Firebase Console -> Authentication -> Users -> Add User với email + pass này là xong ngay!)`;
+                    }
+                    alert(msg);
+                } else {
+                    alert('Lỗi khi lưu phân quyền: ' + err.message);
+                }
+            });
+        }
+
+        function revokeAdmin(safeKey, name) {
+            if (safeKey.includes('0949991515') || safeKey.includes('thang') || name === 'Nguyễn Toàn Thắng') {
+                alert('Không thể thu hồi quyền của Quản Lý Hệ Thống!');
+                return;
+            }
+            if (!confirm(`Bạn có chắc chắn muốn thu hồi quyền của [${name}] không?`)) return;
+            db.ref('admins/' + safeKey).remove((err) => {
+                if (!err) {
+                    alert(`Đã thu hồi quyền của ${name}.`);
+                } else {
+                    alert('Lỗi: ' + err.message);
+                }
+            });
+        }
+
+        // ==================== NHẬP DỮ LIỆU HÀNG LOẠT (BULK IMPORT) ====================
+        let parsedBulkMembers = [];
+
+        function openBulkImportModal() {
+            parsedBulkMembers = [];
+            const preview = document.getElementById('bulkImportPreview');
+            if (preview) preview.innerHTML = '';
+            const saveBtn = document.getElementById('btn-save-bulk');
+            if (saveBtn) saveBtn.style.display = 'none';
+            openModal('importModal');
+        }
+
+        function downloadExcelTemplate() {
+            const csvContent = "\uFEFF" + 
+                "Họ và Tên,Thế hệ,Tên Cha/Mẹ trực hệ,Giới tính (Nam/Nữ),Ngày sinh,Ngày mất (ghi AL nếu Âm lịch),Vợ/Chồng,Nơi an táng,Ghi chú\n" +
+                "Nguyễn Văn An,5,Nguyễn Văn Kế,Nam,15/04/1960,,Trần Thị Mai,Hà Nam,Chi trưởng\n" +
+                "Nguyễn Thị Bình,5,Nguyễn Văn Kế,Nữ,10/08/1965,15/8 (AL),Lê Văn C,Ninh Bình,Bà cô tổ\n" +
+                "Nguyễn Văn Dũng,6,Nguyễn Văn An,Nam,01/01/1990,,Phạm Thị H,Hà Nội,Cháu đích tôn\n";
+            
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = "Bieu_Mau_Nhap_Gia_Pha_Ho_Nguyen.csv";
+            link.click();
+        }
+
+        function fillSampleImportData() {
+            const sample = 
+`Nguyễn Văn Minh	5	Nguyễn Văn Kế	Nam	15/04/1962		Trần Thị Bích	Hà Nam	Chi 2
+Nguyễn Thị Lan	5	Nguyễn Văn Kế	Nữ	20/09/1966	14/5 (AL)	Vũ Văn Hùng	Ninh Bình	Bà cô
+Nguyễn Văn Hoàng	6	Nguyễn Văn Minh	Nam	05/11/1992		Đỗ Thị Thu	Hà Nội	Con trai cả
+Nguyễn Thị Ngọc	6	Nguyễn Văn Minh	Nữ	12/03/1996			Đà Nẵng	Con gái thứ`;
+            document.getElementById('bulkImportInput').value = sample;
+            parseBulkInputData();
+        }
+
+        function parseBulkInputData() {
+            const text = document.getElementById('bulkImportInput').value.trim();
+            const previewContainer = document.getElementById('bulkImportPreview');
+            const saveBtn = document.getElementById('btn-save-bulk');
+
+            if (!text) {
+                alert('Vui lòng dán dữ liệu từ bảng tính Excel vào khung!');
+                return;
+            }
+
+            const lines = text.split(/\r?\n/);
+            parsedBulkMembers = [];
+
+            lines.forEach((line, idx) => {
+                const raw = line.trim();
+                if (!raw) return;
+
+                // Bỏ qua dòng tiêu đề nếu có
+                if (idx === 0 && (raw.toLowerCase().includes('họ và tên') || raw.toLowerCase().includes('thế hệ'))) return;
+
+                // Phân tách bằng Tab hoặc dấu phẩy hoặc dấu chấm phẩy
+                let cols = raw.split('\t');
+                if (cols.length < 3) {
+                    cols = raw.split(',');
+                }
+                if (cols.length < 3) {
+                    cols = raw.split(';');
+                }
+
+                const name = (cols[0] || '').trim();
+                if (!name) return;
+
+                const gen = parseInt((cols[1] || '').trim()) || 1;
+                const parentName = (cols[2] || '').trim();
+                const genderRaw = (cols[3] || '').toLowerCase().trim();
+                const gender = (genderRaw.includes('nữ') || genderRaw.includes('female') || genderRaw.includes('bà') || genderRaw.includes('cô')) ? 'female' : 'male';
+                const dob = (cols[4] || '').trim();
+                const dod = (cols[5] || '').trim();
+                const spouse = (cols[6] || '').trim();
+                const burial = (cols[7] || '').trim();
+                const notes = (cols[8] || '').trim();
+
+                // Tìm cha/mẹ trong danh sách hiện tại
+                let fid = null;
+                if (parentName) {
+                    const foundParent = familyMembers.find(m => m.name.toLowerCase() === parentName.toLowerCase() || m.name.toLowerCase().includes(parentName.toLowerCase()));
+                    if (foundParent) {
+                        fid = foundParent.id;
+                    }
+                }
+
+                const newId = 'MEM_' + Date.now() + '_' + Math.floor(Math.random()*1000);
+
+                parsedBulkMembers.push({
+                    id: newId,
+                    name: name,
+                    gen: gen,
+                    parentName: parentName,
+                    fid: fid,
+                    gender: gender,
+                    dob: dob,
+                    dod: dod,
+                    spouse: spouse,
+                    burial: burial,
+                    notes: notes,
+                    img: DEFAULT_AVATAR
+                });
+            });
+
+            if (parsedBulkMembers.length === 0) {
+                previewContainer.innerHTML = `<p style="color:#b91c1c; padding:10px;">Không nhận diện được dòng dữ liệu hợp lệ nào. Hãy kiểm tra lại thứ tự các cột!</p>`;
+                saveBtn.style.display = 'none';
+                return;
+            }
+
+            saveBtn.style.display = 'inline-flex';
+            previewContainer.innerHTML = `
+                <div style="margin-top:10px;">
+                    <div style="font-weight:bold; color:#16a34a; margin-bottom:6px;">
+                        ✅ Đã nhận diện được ${parsedBulkMembers.length} thành viên sẵn sàng nạp:
+                    </div>
+                    <div class="preview-table-wrap">
+                        <table class="preview-table">
+                            <thead>
+                                <tr>
+                                    <th>STT</th>
+                                    <th>Họ và Tên</th>
+                                    <th>Thế hệ</th>
+                                    <th>Cha/Mẹ</th>
+                                    <th>Giới tính</th>
+                                    <th>Ngày sinh</th>
+                                    <th>Ngày mất</th>
+                                    <th>Vợ/Chồng</th>
+                                    <th>An táng</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${parsedBulkMembers.map((m, i) => `
+                                    <tr>
+                                        <td>${i + 1}</td>
+                                        <td><b>${m.name}</b></td>
+                                        <td>Đời ${m.gen}</td>
+                                        <td>${m.parentName ? (m.fid ? `🔗 ${m.parentName}` : `⚠️ ${m.parentName} (Chưa khớp ID)`) : '—'}</td>
+                                        <td>${m.gender === 'female' ? 'Nữ' : 'Nam'}</td>
+                                        <td>${m.dob || '—'}</td>
+                                        <td>${m.dod ? `<span style="color:#b91c1c; font-weight:bold;">${m.dod}</span>` : '—'}</td>
+                                        <td>${m.spouse || '—'}</td>
+                                        <td>${m.burial || '—'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        function executeBulkSave() {
+            if (!parsedBulkMembers || parsedBulkMembers.length === 0) return;
+            if (!confirm(`XÁC NHẬN: Bạn muốn nạp đồng loạt ${parsedBulkMembers.length} thành viên này vào Cây Gia Phả?`)) return;
+
+            const updates = {};
+            parsedBulkMembers.forEach(m => {
+                const itemToSave = {
+                    id: m.id,
+                    name: m.name,
+                    gen: m.gen,
+                    gender: m.gender,
+                    fid: m.fid || null,
+                    dob: m.dob || '',
+                    dod: m.dod || '',
+                    spouse: m.spouse || '',
+                    burial: m.burial || '',
+                    notes: m.notes || '',
+                    img: m.img || DEFAULT_AVATAR
+                };
+                updates['members/' + m.id] = itemToSave;
+            });
+
+            db.ref().update(updates, (err) => {
+                if (!err) {
+                    alert(`🎉 Thành công! Đã nạp ${parsedBulkMembers.length} thành viên mới vào gia phả!`);
+                    closeModal('importModal');
+                } else {
+                    alert('Lỗi khi nạp hàng loạt: ' + err.message);
+                }
+            });
+        }
+
+        // ==================== SAO LƯU DỮ LIỆU ====================
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(familyMembers, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `Gia_Pha_Ho_Nguyen_Ly_Nhan_${new Date().toISOString().slice(0,10)}.json`);
+            dlAnchorElem.click();
+        }
+
+        // ==================== MODAL HELPERS ====================
+        function openModal(id) {
+            const modalEl = document.getElementById(id);
+            if (modalEl) {
+                modalEl.classList.add('active');
+            } else {
+                console.error("Không tìm thấy modal với id:", id);
+            }
+        }
+
+        function closeModal(id) {
+            const modalEl = document.getElementById(id);
+            if (modalEl) {
+                modalEl.classList.remove('active');
+            }
+        }
+
+        // Đóng modal khi bấm ra vùng nền mờ bên ngoài
+        window.addEventListener('click', function(e) {
+            if (e.target && e.target.classList && e.target.classList.contains('modal')) {
+                e.target.classList.remove('active');
+            }
+        });
+    </script>
+</body>
+</html>
